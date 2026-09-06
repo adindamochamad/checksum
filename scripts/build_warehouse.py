@@ -82,18 +82,18 @@ STAGES: dict[str, list[tuple[str, str]]] = {
         """),
         ("seed studio originals", """
             INSERT INTO catalog VALUES
-             ('org001','Nightshade Parish','tvSeries',2024,3300,7.8,0,1,0.81,1),
-             ('org002','The Long Quiet','tvSeries',2024,3180,8.4,0,2,0.47,1),
-             ('org003','Harbour & Vine','tvSeries',2024,2820,7.6,0,3,0.55,1),
-             ('org004','Ashfall County','tvSeries',2024,3420,8.1,0,4,0.51,1),
-             ('org005','The Gilded Hour','tvSeries',2024,3600,7.4,0,5,0.63,1),
-             ('org006','Salt & Stone','tvMiniSeries',2024,3000,8.6,0,6,0.44,1),
-             ('org007','Reverb','tvSeries',2024,2700,7.1,0,7,0.68,1),
-             ('org008','The Understudy','tvSeries',2024,3120,7.9,0,8,0.52,1),
-             ('org009','Cold Harbor Lane','tvSeries',2024,3300,7.3,0,9,0.60,1),
-             ('org010','Wildflower Season','tvMiniSeries',2024,3540,8.2,0,10,0.49,1),
-             ('org011','The Cartographer','tvSeries',2024,2940,7.7,0,11,0.57,1),
-             ('org012','Fathom','tvSeries',2024,3240,7.0,0,12,0.71,1)
+             ('org001','Nightshade Parish','tvSeries',2026,3300,7.8,0,1,0.81,1),
+             ('org002','The Long Quiet','tvSeries',2026,3180,8.4,0,2,0.47,1),
+             ('org003','Harbour & Vine','tvSeries',2026,2820,7.6,0,3,0.55,1),
+             ('org004','Ashfall County','tvSeries',2026,3420,8.1,0,4,0.51,1),
+             ('org005','The Gilded Hour','tvSeries',2026,3600,7.4,0,5,0.63,1),
+             ('org006','Salt & Stone','tvMiniSeries',2026,3000,8.6,0,6,0.44,1),
+             ('org007','Reverb','tvSeries',2026,2700,7.1,0,7,0.68,1),
+             ('org008','The Understudy','tvSeries',2026,3120,7.9,0,8,0.52,1),
+             ('org009','Cold Harbor Lane','tvSeries',2026,3300,7.3,0,9,0.60,1),
+             ('org010','Wildflower Season','tvMiniSeries',2026,3540,8.2,0,10,0.49,1),
+             ('org011','The Cartographer','tvSeries',2026,2940,7.7,0,11,0.57,1),
+             ('org012','Fathom','tvSeries',2026,3240,7.0,0,12,0.71,1)
         """),
     ],
     "policy": [
@@ -188,7 +188,12 @@ FROM (
 """
 
 # Share of playbacks going to the current originals slate.
-ORIGINALS_SHARE = 0.40
+#
+# 0.40 gave 12 titles 40% of a 4,711-title catalog's traffic -- implausible on its
+# face, and it made every reading scan 200M rows. That starved the fan-out: six
+# concurrent readings took 30s against ~28s serial, a 0.9x "speedup", because a
+# single-replica service has no spare cores to parallelise across.
+ORIGINALS_SHARE = 0.10
 
 BATCH_ROWS = 25_000_000
 _BATCHES = TELEMETRY_ROWS // BATCH_ROWS
