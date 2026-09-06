@@ -1,0 +1,11 @@
+# Google AI stack -- the only AI vendor permitted by the contest rules.
+google-adk[mcp]==2.8.0
+google-genai==2.22.0
+
+# CRITICAL PIN: google-adk declares mcp<2 only inside its "mcp" extra, so an
+# unpinned install silently pulls mcp 2.x, which breaks McpToolset with a
+# misleading ImportError. See CLAUDE.md trap #1.
+mcp>=1.24,<2
+
+# ClickHouse partner integration -- launched as a stdio MCP server at runtime.
+mcp-clickhouse==0.6.0

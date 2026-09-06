@@ -1,0 +1,34 @@
+# Konteks internal — jangan dikirim ke repo publik yang dinilai juri
+docs/
+
+# Secrets
+.env
+.env.local
+*.key
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+.next/
+
+# Data lokal
+data/*.tsv
+data/*.csv
+data/*.gz
+data/*.zst
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
