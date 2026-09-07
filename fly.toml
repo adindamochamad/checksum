@@ -1,0 +1,51 @@
+# Checksum on Fly.io
+#
+# Two settings here are not defaults and both matter for judging, which happens
+# weeks after submission on a link nobody is watching:
+#
+#   primary_region = "sin"    Same region as the ClickHouse Cloud service. Each
+#                             verification makes nine round trips to the warehouse;
+#                             putting the app in Europe would add a quarter second
+#                             to every one of them.
+#
+#   min_machines_running = 1  The machine must not sleep. A judge who opens a cold
+#                             URL waits through a container start plus an MCP session
+#                             plus a catalog resolve, and closes the tab.
+
+app = "checksum"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    # A verification holds its connection open for its whole run. Keep the ceiling
+    # low so a burst queues rather than starving the warehouse of connections.
+    soft_limit = 12
+    hard_limit = 20
+
+# Startup opens the MCP session, loads the policy and resolves the catalog, so the
+# grace period has to outlast that or Fly will kill a machine that is working.
+[[http_service.checks]]
+  grace_period = "90s"
+  interval = "30s"
+  method = "GET"
+  timeout = "10s"
+  path = "/api/health"
+
+[[vm]]
+  memory = "1gb"       # measured 181 MiB idle; the headroom is for concurrent runs
+  cpu_kind = "shared"
+  cpus = 1
