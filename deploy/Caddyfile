@@ -1,0 +1,28 @@
+# TLS and nothing else. Caddy fetches a Let's Encrypt certificate for $DOMAIN on
+# first boot and renews it on its own.
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Verifications stream over SSE for up to a couple of minutes on the public
+	# GitHub dataset. Default proxy timeouts cut that off mid-flight, and the page
+	# would sit half-painted with no error.
+	reverse_proxy app:8080 {
+		flush_interval -1
+		transport http {
+			read_timeout 300s
+			write_timeout 300s
+		}
+	}
+
+	header {
+		-Server
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Content-Type-Options nosniff
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

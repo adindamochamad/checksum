@@ -1,0 +1,56 @@
+# Checksum on a VPS.
+#
+# Caddy sits in front purely for TLS. A judge opening an http:// address sees
+# "Not secure" in the address bar before they see anything else, and that is the
+# first impression a submission cannot afford.
+#
+#   With a domain:  DOMAIN=checksum.example.com
+#   Without one:    DOMAIN=<dashed-ip>.sslip.io   e.g. 203-0-113-7.sslip.io
+#                   sslip.io resolves any dashed IP to that IP, so Let's Encrypt
+#                   can issue a real certificate without owning a domain.
+#
+# Usage:
+#   cp ../.env .env            # GOOGLE_API_KEY + CLICKHOUSE_*
+#   echo "DOMAIN=..." >> .env
+#   docker compose up -d --build
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: "8080"
+    expose:
+      - "8080"
+    volumes:
+      # Warming the preset cache costs Gemini quota, which is twenty requests a
+      # day. It must survive a container rebuild.
+      - checksum-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if b'\"ready\":true' in urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=8).read() else 1)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  checksum-data:
+  caddy-data:
+  caddy-config:
