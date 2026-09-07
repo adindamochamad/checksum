@@ -32,3 +32,6 @@ data/*.zst
 .DS_Store
 .idea/
 .vscode/
+
+# Warmed verification cache -- regenerated at runtime, costs quota to rebuild
+data/warm_cache.json

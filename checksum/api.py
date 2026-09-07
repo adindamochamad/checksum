@@ -17,16 +17,20 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import pathlib
 import time
 from contextlib import asynccontextmanager
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from . import cache as warm_cache
 from .agents import adjudicator_agent, naive_agent
 from .compare import _guards_brief, _readings_brief, _say, receipts
 from .policy import load_policy
@@ -34,6 +38,10 @@ from .query import tools_for
 from .variants import Scope, all_variants, resolve_scope
 from .verify import adjudicate, audit_foreign_sql, stream_variants
 from .warehouse import OWN_WAREHOUSE, read_only_toolset
+
+# Replay pacing. A cached run still reads as a verification happening rather than a
+# wall of text landing at once. Set to 0 for screenshots and automated capture.
+REPLAY_DELAY = float(os.environ.get("CHECKSUM_REPLAY_DELAY", "0.12"))
 
 PRESETS = [
     "Which of our 2026 originals should we renew?",
@@ -65,6 +73,8 @@ async def lifespan(app: FastAPI):
     engine.policy = await load_policy(engine.tools)
     engine.scope = await resolve_scope(engine.tools, Scope())
     engine.variants = all_variants(engine.scope, engine.policy)
+    # Warming costs quota, so it must survive a restart.
+    engine.cache = warm_cache.load()
     engine.ready = True
     try:
         yield
@@ -127,9 +137,17 @@ async def _verify_stream(question: str) -> AsyncIterator[dict[str, str]]:
     )
 
     # Left panel: the standard build, answering the question as literally asked.
+    #
+    # Every Gemini call below is wrapped. The free tier allows twenty requests a day,
+    # and a judge meeting a 429 must still see the verification -- which needs no
+    # model at all. The readings, the verdict and the receipts are pure ClickHouse.
     started = time.monotonic()
     yield emit("naive_start")
-    answer, calls = await _say(naive_agent(engine.naive_toolset), question)
+    try:
+        answer, calls = await _say(naive_agent(engine.naive_toolset), question)
+    except Exception as exc:
+        answer, calls = "", []
+        yield emit("model_unavailable", where="standard_agent", reason=str(exc)[:200])
     naive_sql = [c["args"].get("query", "") for c in calls if c["tool"] == "run_query"]
     yield emit(
         "naive_done",
@@ -188,8 +206,15 @@ async def _verify_stream(question: str) -> AsyncIterator[dict[str, str]]:
         readings=_readings_brief(runs, engine.scope),
         guards=_guards_brief(runs),
     )
-    prose, _ = await _say(adjudicator, question)
-    yield emit("explanation", text=prose)
+    try:
+        prose, _ = await _say(adjudicator, question)
+        yield emit("explanation", text=prose)
+    except Exception as exc:
+        # The verdict was never the model's to decide, so losing the model costs the
+        # prose and nothing else. No explanation event here: the verdict block above
+        # already carries this text, and emitting it again printed it twice.
+        prose = f"{verdict.headline}\n\n{verdict.detail}"
+        yield emit("model_unavailable", where="adjudicator", reason=str(exc)[:200])
 
     from .compare import Comparison, Side
 
@@ -205,10 +230,18 @@ async def _verify_stream(question: str) -> AsyncIterator[dict[str, str]]:
             )
         ),
     )
-    yield emit("done")
-
+    # Store before the final yield, not after. An async generator stops at its last
+    # yield -- the consumer never asks for another item, so nothing below it runs.
+    # Written afterwards, this silently cached nothing and every judge paid the full
+    # 35s live path.
     if question in PRESETS:
-        engine.cache[question] = collected
+        engine.cache[question] = list(collected)
+        try:
+            warm_cache.save(engine.cache)
+        except OSError:
+            pass  # An unwritable disk must not fail a good verification.
+
+    yield emit("done")
 
 
 @app.post("/api/ask")
@@ -227,7 +260,8 @@ async def ask(body: Ask) -> EventSourceResponse:
                 yield event
                 # Paced so a cached run still reads as a verification happening,
                 # rather than a wall of text appearing at once.
-                await asyncio.sleep(0.12)
+                if REPLAY_DELAY:
+                    await asyncio.sleep(REPLAY_DELAY)
 
         return EventSourceResponse(replay())
 
@@ -239,3 +273,9 @@ async def warm() -> None:
     for question in PRESETS:
         async for _ in _verify_stream(question):
             pass
+
+
+# Mounted last: the API routes above must win, and everything else is the page.
+_WEB = pathlib.Path(__file__).resolve().parent.parent / "web"
+if _WEB.is_dir():
+    app.mount("/", StaticFiles(directory=_WEB, html=True), name="web")

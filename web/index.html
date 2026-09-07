@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checksum — verify the number before you decide on it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="mark">
+    <span class="mark-glyph" aria-hidden="true">✓</span>
+    <span class="mark-word">Checksum</span>
+  </div>
+  <p class="standfirst">
+    The query ran fine. <em>The number was wrong.</em>
+  </p>
+  <p class="subhead">
+    A studio analytics answer, asked nine defensible ways at once —
+    against <span data-rows>500 million</span> playback events in ClickHouse.
+  </p>
+</header>
+
+<section class="ask">
+  <form id="ask-form" autocomplete="off">
+    <label class="ask-label" for="question">One question, sent to both agents</label>
+    <div class="ask-row">
+      <input id="question" name="question" type="text"
+             value="Which of our 2026 originals should we renew?"
+             spellcheck="false">
+      <button type="submit" id="run">
+        <span class="run-label">Verify</span>
+        <span class="run-count" hidden><span id="landed">0</span>/9</span>
+      </button>
+    </div>
+    <div class="presets" id="presets"></div>
+  </form>
+</section>
+
+<main class="stage" id="stage">
+
+  <article class="panel panel-standard" id="panel-standard">
+    <header>
+      <h2>Standard agent</h2>
+      <p class="panel-note">Gemini + the ClickHouse MCP server. One query, one answer.</p>
+    </header>
+    <div class="panel-body">
+      <p class="idle">Waiting.</p>
+    </div>
+    <footer class="panel-foot" hidden>
+      <span class="stat"><b id="naive-time">—</b> seconds</span>
+      <span class="stat"><b id="naive-queries">—</b> query</span>
+    </footer>
+  </article>
+
+  <article class="panel panel-checksum" id="panel-checksum">
+    <header>
+      <h2>Checksum</h2>
+      <p class="panel-note">Every defensible reading of the same question, at once.</p>
+    </header>
+
+    <ol class="readings" id="readings"></ol>
+
+    <div class="verdict" id="verdict" hidden>
+      <p class="verdict-head" id="verdict-head"></p>
+      <p class="verdict-detail" id="verdict-detail"></p>
+    </div>
+
+    <div class="explanation" id="explanation" hidden></div>
+
+    <footer class="panel-foot" hidden>
+      <span class="stat"><b id="checksum-time">—</b> seconds</span>
+      <span class="stat"><b id="checksum-queries">—</b> readings</span>
+    </footer>
+  </article>
+
+</main>
+
+<section class="movement" id="movement" hidden>
+  <h3>Where the leader goes when the definition changes</h3>
+  <p class="movement-note" id="movement-note"></p>
+  <div class="slope" id="slope"></div>
+</section>
+
+<section class="receipts" id="receipts-section" hidden>
+  <div class="receipts-head">
+    <h3>Receipts</h3>
+    <p>Every reading above ran this SQL against ClickHouse. Nothing here is a summary
+       of a query — it is the query.</p>
+  </div>
+  <div class="receipt-list" id="receipts"></div>
+</section>
+
+<footer class="colophon">
+  <p>
+    Catalog is real — IMDb non-commercial datasets. Playback telemetry is
+    <strong>simulated at studio scale</strong>; no public playback telemetry exists,
+    so it was generated inside ClickHouse. The studio originals are invented. The
+    metric policy stands in for an internal analytics handbook.
+  </p>
+  <p class="colophon-meta">
+    Gemini via the Agent Development Kit · ClickHouse via <code>mcp-clickhouse</code> over stdio
+  </p>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

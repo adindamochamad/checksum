@@ -354,7 +354,85 @@ async def qa_api(report: Report) -> None:
             )
 
 
-STAGES = {"foundation", "variants", "agents", "api"}
+async def qa_web(report: Report) -> None:
+    """Drive the real page in a real browser.
+
+    The API gate passed sixteen checks while the page rendered nothing at all:
+    sse-starlette terminates lines with CRLF, httpx's aiter_lines normalises that
+    and the browser's fetch reader does not. Nothing below HTTP can catch this.
+    Requires the server on :8000 and playwright's chromium.
+    """
+    from playwright.async_api import async_playwright
+
+    base = "http://127.0.0.1:8000"
+    question = "Which of our 2026 originals should we renew?"
+
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch()
+        page = await browser.new_page(viewport={"width": 1440, "height": 900})
+        errors: list[str] = []
+        page.on("pageerror", lambda e: errors.append(str(e)[:200]))
+
+        try:
+            await page.goto(base, wait_until="networkidle", timeout=30_000)
+        except Exception as exc:
+            report.check(False, "page loads", f"{exc}")
+            await browser.close()
+            return
+        report.check(True, "page loads")
+        report.check(
+            await page.title() != "", f"title set: {await page.title()!r}"
+        )
+
+        await page.fill("#question", question)
+        await page.click("#run")
+
+        try:
+            await page.wait_for_selector("#receipts-section:not([hidden])", timeout=180_000)
+        except Exception:
+            report.check(False, "verification completes in the browser",
+                         "receipts never appeared -- the stream is not being parsed")
+            await browser.close()
+            return
+        report.check(True, "verification completes in the browser")
+
+        readings = await page.query_selector_all("#readings li")
+        report.check(len(readings) >= 8, f"{len(readings)} readings rendered")
+
+        receipts_shown = await page.query_selector_all(".receipt")
+        report.check(len(receipts_shown) >= 8, f"{len(receipts_shown)} receipts rendered")
+
+        sql_blocks = await page.query_selector_all(".receipt .sql")
+        report.check(len(sql_blocks) >= 8, "every receipt shows its SQL on the page")
+        first_sql = (await sql_blocks[0].inner_text()) if sql_blocks else ""
+        report.check(
+            "SELECT" in first_sql.upper(),
+            "SQL is visible text, not hidden behind an accordion",
+        )
+
+        verdict = await page.inner_text("#verdict-head")
+        report.check(bool(verdict.strip()), f"verdict shown: {verdict[:60]!r}")
+
+        movement_hidden = await page.eval_on_selector("#movement", "e => e.hidden")
+        report.check(not movement_hidden, "rank-movement chart rendered")
+        dots = await page.query_selector_all(".slope-dot")
+        report.check(len(dots) >= 5, f"{len(dots)} points plotted")
+
+        # A page that throws is a page a judge sees break.
+        report.check(not errors, "no uncaught JavaScript errors", "; ".join(errors))
+
+        # The page must not scroll sideways at phone width.
+        await page.set_viewport_size({"width": 390, "height": 844})
+        await page.wait_for_timeout(400)
+        overflow = await page.evaluate(
+            "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
+        )
+        report.check(overflow <= 1, f"no horizontal overflow at 390px (got {overflow}px)")
+
+        await browser.close()
+
+
+STAGES = {"foundation", "variants", "agents", "api", "web"}
 
 
 async def main(stage: str) -> int:
@@ -372,9 +450,12 @@ async def main(stage: str) -> int:
     elif stage == "agents":
         report = Report("agents (block 2c)")
         await qa_agents(report)
-    else:
+    elif stage == "api":
         report = Report("api (block 3)")
         await qa_api(report)
+    else:
+        report = Report("web (block 4)")
+        await qa_web(report)
     return report.finish()
 
 
