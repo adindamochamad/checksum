@@ -434,7 +434,65 @@ async def qa_web(report: Report) -> None:
         await browser.close()
 
 
-STAGES = {"foundation", "variants", "agents", "api", "web"}
+async def qa_public(report: Report) -> None:
+    """The claim that matters most: Checksum finds instability it did not plant.
+
+    Everything on the studio warehouse is arguable as circular -- the telemetry was
+    generated here and the disagreement installed here. This gate runs the same
+    machinery against ClickHouse's public Playground, on GitHub data nobody here has
+    touched, and asserts the finding is real.
+    """
+    from checksum.public_data import GITHUB_SCOPE, QUESTION, github_variants
+    from checksum.warehouse import PLAYGROUND
+
+    toolset = read_only_toolset(PLAYGROUND, timeout=300.0)
+    try:
+        tools = await tools_for(toolset)
+        variants = github_variants()
+        report.check(len(variants) >= 6, f"{len(variants)} readings built for public data")
+        report.check(
+            GITHUB_SCOPE.events_table.startswith("github."),
+            f"aimed at {GITHUB_SCOPE.events_table}, not our own warehouse",
+        )
+
+        runs = await run_variants(tools, variants)
+        failed = [r for r in runs if not r.ok]
+        report.check(
+            not failed,
+            f"all {len(runs)} readings executed against 11B real rows",
+            "; ".join(f"{r.variant.key}: {r.error[:80]}" for r in failed),
+        )
+
+        # No policy table exists here, and Checksum must not invent one.
+        verdict = adjudicate(runs, [])
+        report.check(not verdict.refused, "question is answerable", verdict.detail)
+        report.check(not verdict.stable, "instability detected in data we did not create")
+        report.check(
+            "No metric policy exists" in verdict.detail,
+            "declines to name a definition as authoritative without a policy",
+            "it claimed authority it does not have",
+        )
+        report.check(
+            verdict.naive_leader != verdict.policy_leader,
+            f"literal reading ({verdict.naive_leader}) disagrees with the "
+            f"deduplicated one ({verdict.policy_leader})",
+        )
+
+        guard = next((r for r in runs if r.variant.key == "guard_concentration" and r.ok), None)
+        report.check(guard is not None, "concentration guard ran")
+        if guard and guard.result.rows:
+            row = dict(zip(guard.result.columns, guard.result.rows[0]))
+            report.check(
+                float(row["worst_ratio"]) > 1000 * float(row["median_repo"]),
+                f"guard exposes the outlier: worst {row['worst_ratio']:,.0f} vs "
+                f"median {row['median_repo']} events per contributor",
+            )
+        print(f"\n        {QUESTION}\n        {verdict.detail[:200]}")
+    finally:
+        await toolset.close()
+
+
+STAGES = {"foundation", "variants", "agents", "api", "web", "public"}
 
 
 async def main(stage: str) -> int:
@@ -455,6 +513,9 @@ async def main(stage: str) -> int:
     elif stage == "api":
         report = Report("api (block 3)")
         await qa_api(report)
+    elif stage == "public":
+        report = Report("public data (not ours)")
+        await qa_public(report)
     else:
         report = Report("web (block 4)")
         await qa_web(report)

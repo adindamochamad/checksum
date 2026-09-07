@@ -9,6 +9,7 @@ const el = (id) => document.getElementById(id);
 
 const state = {
   running: false,
+  dataset: "",
   landed: 0,
   readings: [],
   receipts: [],
@@ -25,18 +26,39 @@ async function loadPresets() {
       fetch("/api/health").then((r) => r.json()),
     ]);
     const cached = new Set(health.cached || []);
-    el("presets").innerHTML = "";
-    presets.questions.forEach((q) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "preset";
-      b.textContent = q;
-      if (cached.has(q)) b.dataset.cached = "1";
-      b.addEventListener("click", () => {
-        el("question").value = q;
-        run(q);
+    const box = el("presets");
+    box.innerHTML = "";
+
+    // Grouped by dataset, because which warehouse a question runs against is the
+    // point rather than a detail: one was built here, the other was not.
+    const groups = new Map();
+    presets.presets.forEach((p) => {
+      if (!groups.has(p.dataset)) groups.set(p.dataset, { label: p.label, items: [] });
+      groups.get(p.dataset).items.push(p);
+    });
+
+    groups.forEach(({ label, items }, key) => {
+      const group = document.createElement("div");
+      group.className = "preset-group";
+      const name = document.createElement("span");
+      name.className = "preset-group-name";
+      name.textContent = label;
+      group.appendChild(name);
+
+      items.forEach((p) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "preset";
+        b.textContent = p.question;
+        if (cached.has(`${p.dataset}::${p.question}`)) b.dataset.cached = "1";
+        b.addEventListener("click", () => {
+          el("question").value = p.question;
+          state.dataset = p.dataset;
+          run(p.question, p.dataset);
+        });
+        group.appendChild(b);
       });
-      el("presets").appendChild(b);
+      box.appendChild(group);
     });
   } catch {
     /* Presets are a convenience; the input still works without them. */
@@ -56,11 +78,29 @@ function reset() {
   el("explanation").hidden = true;
   el("movement").hidden = true;
   el("receipts-section").hidden = true;
+  el("scope-banner").hidden = true;
   el("landed").textContent = "0";
   document.querySelectorAll(".panel-foot").forEach((f) => (f.hidden = true));
 }
 
 /* --------------------------------------------------------------- rendering */
+
+function renderScope(ev) {
+  const banner = el("scope-banner");
+  banner.innerHTML = "";
+  const name = document.createElement("b");
+  name.textContent = ev.dataset_label;
+  banner.appendChild(name);
+  banner.appendChild(document.createTextNode(` — ${ev.blurb}`));
+  if (!ev.has_policy) {
+    const note = document.createElement("i");
+    note.textContent =
+      " No metric policy exists here, so Checksum can report disagreement but " +
+      "cannot name a definition as correct.";
+    banner.appendChild(note);
+  }
+  banner.hidden = false;
+}
 
 /* The free Gemini tier allows twenty requests a day. When it is spent, the
    verification still runs -- it never needed a model -- so say so plainly rather
@@ -277,7 +317,7 @@ function renderReceipts(items) {
 
 /* ---------------------------------------------------------------- streaming */
 
-async function run(question) {
+async function run(question, dataset = "") {
   if (state.running) return;
   state.running = true;
   reset();
@@ -291,7 +331,7 @@ async function run(question) {
     const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, dataset }),
     });
     if (!response.ok) throw new Error(`server said ${response.status}`);
 
@@ -329,6 +369,7 @@ async function run(question) {
 
 function handle(ev) {
   switch (ev.type) {
+    case "scope":        return renderScope(ev);
     case "model_unavailable": return renderModelDown(ev);
     case "naive_done":   return renderNaive(ev);
     case "naive_audit":  return renderAudit(ev);
@@ -350,7 +391,7 @@ function handle(ev) {
 el("ask-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const q = el("question").value.trim();
-  if (q) run(q);
+  if (q) run(q, state.dataset);
 });
 
 /* Deep link: /?q=<question>&auto=1 . Lets the demo recording start mid-flight

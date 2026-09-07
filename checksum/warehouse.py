@@ -45,13 +45,19 @@ class Warehouse:
     events_table: str = ""
     catalog_table: str = ""
     policy_table: str = ""
+    #: mcp-clickhouse caps a query at 30s by default. Billions of rows on a shared
+    #: demo cluster need more, and a reading that times out is a reading that
+    #: silently stops contributing to the verdict.
+    query_timeout: int = 0
     _env: dict[str, str] = field(default_factory=dict)
 
     def env(self) -> dict[str, str]:
+        extra = {"CLICKHOUSE_MCP_QUERY_TIMEOUT": str(self.query_timeout)} if self.query_timeout else {}
         if self._env:
-            return dict(self._env)
+            return {**self._env, **extra}
         load_env()
         return {
+            **extra,
             "CLICKHOUSE_HOST": os.environ["CLICKHOUSE_HOST"],
             "CLICKHOUSE_PORT": os.environ.get("CLICKHOUSE_PORT", "8443"),
             "CLICKHOUSE_USER": os.environ.get("CLICKHOUSE_USER", "default"),
@@ -71,6 +77,7 @@ OWN_WAREHOUSE = Warehouse(
 PLAYGROUND = Warehouse(
     label="playground",
     describe="ClickHouse's public SQL Playground. Real datasets this project never touched.",
+    query_timeout=150,
     _env={
         "CLICKHOUSE_HOST": "sql-clickhouse.clickhouse.com",
         "CLICKHOUSE_PORT": "8443",

@@ -206,9 +206,10 @@ def adjudicate(
 
     naive = next((r for r in rankings if r.variant.key == "playback_start"), None)
     basis = authoritative(policy)
-    policy_run = next(
-        (r for r in rankings if basis and r.variant.key == "completion_90"), None
-    )
+    # The "completion_90" key marks the most defensible reading in either dataset --
+    # the policy definition on the studio warehouse, distinct contributors on GitHub.
+    # It is looked up whether or not a policy table exists; only the wording changes.
+    policy_run = next((r for r in rankings if r.variant.key == "completion_90"), None)
     naive_leader = naive.ranking()[0] if naive and naive.ranking() else ""
     policy_leader = policy_run.ranking()[0] if policy_run and policy_run.ranking() else ""
 
@@ -229,11 +230,24 @@ def adjudicate(
     if naive_leader and policy_leader and naive_leader != policy_leader:
         naive_rank = policy_run.ranking().index(naive_leader) + 1 if policy_run and \
             naive_leader in policy_run.ranking() else None
-        where = f"rank {naive_rank}" if naive_rank else "off the list"
-        moved = (
-            f" {naive_leader} leads on playback starts but sits at {where} under "
-            f"'{basis.name}', which {basis.source_document} makes the basis for renewal."
-        )
+        where = f"rank {naive_rank}" if naive_rank else "off the list entirely"
+        if basis:
+            moved = (
+                f" {naive_leader} leads the most literal reading but sits at {where} "
+                f"under '{basis.name}', which {basis.source_document} makes the basis "
+                f"for renewal."
+            )
+        else:
+            # No policy table -- on borrowed data nobody has written the definition
+            # down, so there is no authority to appeal to. Report the disagreement and
+            # let the guards explain it; claiming one reading is correct would be
+            # exactly the overconfidence this tool exists to catch.
+            moved = (
+                f" {naive_leader} leads the most literal reading and sits at {where} "
+                f"under '{policy_run.variant.title.lower()}'. No metric policy exists "
+                f"for this dataset, so neither reading is authoritative -- but they "
+                f"cannot both be the answer."
+            )
 
     return Verdict(
         runs=runs, stable=False, refused=False,

@@ -467,3 +467,24 @@ em { font-style: italic; }
 .colophon strong { color: var(--ink); }
 .colophon-meta { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); margin-top: .8rem; }
 .colophon code { font-family: var(--mono); color: var(--ink-soft); }
+
+.preset-group { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; margin-bottom: .5rem; }
+.preset-group-name {
+  font-family: var(--mono);
+  font-size: .66rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  min-width: 9rem;
+}
+
+.scope-banner {
+  margin: 1.1rem 0 0;
+  padding-left: .8rem;
+  border-left: 2px solid var(--deep);
+  font-size: .86rem;
+  color: var(--ink-soft);
+  max-width: 68ch;
+}
+.scope-banner b { color: var(--deep); font-weight: 600; }
+.scope-banner i { color: var(--rust); font-style: normal; }
