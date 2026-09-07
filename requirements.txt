@@ -1,11 +1,28 @@
-# Google AI stack -- the only AI vendor permitted by the contest rules.
+# Checksum -- agent environment.
+#
+# The ClickHouse partner integration, mcp-clickhouse, is NOT listed here. It is a
+# required dependency of this project and is declared in:
+#
+#     requirements-mcp-server.txt
+#
+# It has to live in its own environment. mcp-clickhouse 0.6.0 depends on fastmcp 4.x,
+# which requires mcp>=2, while google-adk 2.8.0 requires mcp<2. Installed together
+# they are unsatisfiable, and pip resolves it by breaking the agent side quietly --
+# McpToolset simply disappears from an import.
+#
+# They never need to meet: the MCP server runs as a separate process behind stdio.
+# checksum/warehouse.py launches it, and every query in the app goes through it.
+
+# Google AI stack -- the only AI vendor the contest rules permit.
 google-adk[mcp]==2.8.0
 google-genai==2.22.0
 
-# CRITICAL PIN: google-adk declares mcp<2 only inside its "mcp" extra, so an
-# unpinned install silently pulls mcp 2.x, which breaks McpToolset with a
-# misleading ImportError. See CLAUDE.md trap #1.
+# CRITICAL PIN. google-adk declares this bound only inside its "mcp" extra, so an
+# unpinned install silently pulls mcp 2.x and breaks McpToolset with a misleading
+# ImportError about casing.
 mcp>=1.24,<2
 
-# ClickHouse partner integration -- launched as a stdio MCP server at runtime.
-mcp-clickhouse==0.6.0
+# Web layer.
+fastapi==0.141.1
+uvicorn==0.52.4
+sse-starlette==3.4.11

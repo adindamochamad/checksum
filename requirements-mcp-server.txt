@@ -1,0 +1,10 @@
+# Checksum -- ClickHouse partner integration.
+#
+# This is the ClickHouse MCP server. It runs as a separate process, launched over
+# stdio by checksum/warehouse.py, and every query the agents make goes through it.
+#
+# It gets its own environment because it depends on fastmcp 4.x, which requires
+# mcp>=2, while google-adk in requirements.txt requires mcp<2. The two are
+# unsatisfiable together and never need to meet: stdio is a process boundary.
+
+mcp-clickhouse==0.6.0

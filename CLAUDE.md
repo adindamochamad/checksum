@@ -95,6 +95,22 @@ GitHub harus menampilkan "MIT" di sidebar About.
 
 ## ⚠️ Jebakan teknis yang sudah diketahui
 
+0. **🔴 `mcp-clickhouse` dan `google-adk` TIDAK BISA satu environment.**
+   `mcp-clickhouse` 0.6.0 → `fastmcp` 4.x → `mcp>=2`. `google-adk` 2.8.0 → `mcp<2`.
+   Tidak terpenuhi bersamaan. Menginstal keduanya membuat `McpToolset` hilang dari import.
+
+   **Mereka memang tidak perlu bertemu** — server MCP jalan sebagai proses terpisah di
+   balik stdio, dan stdio adalah batas proses. Itulah sebabnya `uv run --with
+   mcp-clickhouse` berhasil sejak awal.
+
+   Struktur yang dipakai sekarang:
+   - `.venv` + `requirements.txt` → aplikasi (google-adk, mcp<2, fastapi)
+   - `.venv-mcp` + `requirements-mcp-server.txt` → server ClickHouse (mcp>=2)
+
+   `checksum/warehouse.py :: mcp_server_command()` memilih `.venv-mcp/bin/mcp-clickhouse`
+   dulu, baru jatuh ke `uv run --with`. **Jangan pernah `pip install mcp-clickhouse` ke
+   `.venv`.**
+
 1. **⚠️ PIN `mcp>=1.24,<2`. Ini jebakan paling mahal — sudah memakan waktu di GATE.**
    `google-adk` 2.8.0 butuh `mcp<2`, tapi konstraint itu **hanya ada di extra**
    (`extra == "mcp"`), jadi `pip install google-adk mcp` polos menarik `mcp` 2.1.1 yang

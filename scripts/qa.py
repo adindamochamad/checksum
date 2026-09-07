@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import pathlib
 import sys
 import time
@@ -364,7 +365,8 @@ async def qa_web(report: Report) -> None:
     """
     from playwright.async_api import async_playwright
 
-    base = "http://127.0.0.1:8000"
+    # Point at a container or a deployment: CHECKSUM_QA_URL=https://...
+    base = os.environ.get("CHECKSUM_QA_URL", "http://127.0.0.1:8000")
     question = "Which of our 2026 originals should we renew?"
 
     async with async_playwright() as pw:
