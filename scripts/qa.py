@@ -298,7 +298,7 @@ async def qa_api(report: Report) -> None:
     import httpx
     from httpx import ASGITransport
 
-    from checksum.api import app, engine
+    from checksum.api import _cache_key, app, engine
 
     transport = ASGITransport(app=app)
     async with app.router.lifespan_context(app):
@@ -307,17 +307,40 @@ async def qa_api(report: Report) -> None:
         ) as client:
             health = (await client.get("/api/health")).json()
             report.check(health["ready"], "startup resolved the warehouse once")
-            report.check(health["titles"] == 12, f"{health['titles']} titles in scope")
-            report.check(health["readings"] >= 8, f"{health['readings']} readings configured")
 
-            presets = (await client.get("/api/presets")).json()
-            report.check(len(presets["questions"]) >= 3, "preset questions offered")
+            datasets = {d["key"]: d for d in health.get("datasets", [])}
+            studio, github = datasets.get("studio", {}), datasets.get("github", {})
+            report.check(
+                {"studio", "github"} <= set(datasets),
+                f"both datasets exposed: {sorted(datasets)}",
+            )
+            report.check(
+                studio.get("readings") == 9,
+                f"{studio.get('readings')} readings on the studio warehouse",
+            )
+            report.check(
+                (github.get("readings") or 0) >= 8,
+                f"{github.get('readings')} readings on public GitHub data",
+            )
+            # The point of the second dataset: no policy to appeal to.
+            report.check(
+                studio.get("has_policy") is True and github.get("has_policy") is False,
+                "only the studio warehouse carries a metric policy",
+            )
 
-            question = presets["questions"][0]
+            presets = (await client.get("/api/presets")).json()["presets"]
+            report.check(len(presets) >= 3, f"{len(presets)} preset questions offered")
+
+            question = presets[0]["question"]
+            dataset_key = presets[0]["dataset"]
+            key = _cache_key(dataset_key, question)
+            # This gate has to measure a live run, so a warm entry would hide it.
+            engine.cache.pop(key, None)
+
             started = time.monotonic()
             kinds, payloads = [], {}
             async with client.stream(
-                "POST", "/api/ask", json={"question": question}
+                "POST", "/api/ask", json={"question": question, "dataset": dataset_key}
             ) as response:
                 report.check(response.status_code == 200, "ask stream opened")
                 async for line in response.aiter_lines():
@@ -327,7 +350,7 @@ async def qa_api(report: Report) -> None:
                         payloads.setdefault(event["type"], event)
             first_pass = time.monotonic() - started
 
-            for expected in ("scope", "naive_done", "reading", "verdict", "explanation",
+            for expected in ("scope", "naive_done", "reading", "verdict",
                              "receipts", "done"):
                 report.check(expected in kinds, f"streamed '{expected}'")
             report.check(
@@ -340,10 +363,31 @@ async def qa_api(report: Report) -> None:
                 "verdict streamed as unstable",
             )
 
-            report.check(question in engine.cache, "preset cached after first run")
+            # The verdict is computed in Python, so it survives a spent model quota;
+            # the prose does not. Both branches are legitimate, and they must cache
+            # differently -- a degraded run frozen into the cache is replayed to every
+            # judge for two weeks, which is worse than no entry at all.
+            if "model_unavailable" in kinds:
+                report.check(
+                    "explanation" not in kinds,
+                    "spent quota: verdict still streamed, prose dropped",
+                )
+                report.check(
+                    key not in engine.cache,
+                    "spent quota: degraded run refused by the cache",
+                    "a 429 run was cached -- judges would replay it for two weeks",
+                )
+                print("\n  NOTE  Gemini quota is spent, so the replay checks below "
+                      "need a clean run.\n        Re-run this gate after the daily "
+                      "reset (midnight Pacific).")
+                return
+
+            report.check("explanation" in kinds, "streamed 'explanation'")
+            report.check(key in engine.cache, "clean run cached")
+
             started = time.monotonic()
             async with client.stream(
-                "POST", "/api/ask", json={"question": question}
+                "POST", "/api/ask", json={"question": question, "dataset": dataset_key}
             ) as response:
                 async for _ in response.aiter_lines():
                     pass

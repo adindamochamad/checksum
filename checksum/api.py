@@ -181,8 +181,12 @@ def _event(kind: str, **payload: Any) -> dict[str, str]:
 
 async def _verify_stream(question: str, dataset: Dataset) -> AsyncIterator[dict[str, str]]:
     collected: list[dict[str, str]] = []
+    degraded = False
 
     def emit(kind: str, **payload: Any) -> dict[str, str]:
+        nonlocal degraded
+        if kind == "model_unavailable":
+            degraded = True
         event = _event(kind, **payload)
         collected.append(event)
         return event
@@ -275,7 +279,11 @@ async def _verify_stream(question: str, dataset: Dataset) -> AsyncIterator[dict[
 
     # Stored before the final yield: an async generator stops at its last yield, so
     # anything written after it never runs.
-    if question in dataset.questions:
+    #
+    # A degraded run is never stored. Judging runs for two weeks off this cache, so a
+    # spent-quota run frozen here would show every judge an empty agent panel and a
+    # 429 -- worse than no entry at all, which at least gets retried on the next ask.
+    if question in dataset.questions and not degraded:
         engine.cache[_cache_key(dataset.key, question)] = list(collected)
         try:
             warm_cache.save(engine.cache)
