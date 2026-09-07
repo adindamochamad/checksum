@@ -235,7 +235,7 @@ gates, including a browser-level gate that drives the real page:
 
 ## Links
 
-- Live demo: _(pending deploy)_
+- Live demo: **https://103-89-7-5.sslip.io**
 - Demo video: _(pending)_
 - Devpost submission: _(pending)_
 

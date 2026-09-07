@@ -1,0 +1,44 @@
+# For a box where port 80 is already taken.
+#
+# Let's Encrypt normally proves control by serving a file over port 80. That port
+# belongs to something else here, so this asks for the TLS-ALPN challenge instead,
+# which runs entirely over 443. Caddy must also be told not to bind 80 at all,
+# otherwise it fails at startup fighting the neighbour for it.
+
+{
+	# Anything unused; Caddy just needs somewhere to not-listen.
+	http_port 8081
+	auto_https disable_redirects
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
+
+	# Verifications stream over SSE for up to a couple of minutes on the public
+	# GitHub dataset. Default proxy timeouts cut that off mid-flight and leave the
+	# page half-painted with no error.
+	reverse_proxy app:8080 {
+		flush_interval -1
+		transport http {
+			read_timeout 300s
+			write_timeout 300s
+		}
+	}
+
+	header {
+		-Server
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Content-Type-Options nosniff
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

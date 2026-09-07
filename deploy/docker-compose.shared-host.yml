@@ -1,0 +1,32 @@
+# Override for a box that already runs something else.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.shared-host.yml up -d --build
+#
+# Two differences from the standalone file, both forced by sharing:
+#
+#   Port 80 belongs to whatever is already there, so Caddy binds 443 only and gets
+#   its certificate over TLS-ALPN instead of the HTTP challenge. See Caddyfile.alpn.
+#
+#   A hard memory limit. On a 1 GB box already running MySQL, an unbounded container
+#   invites the OOM killer, and the OOM killer picks the largest process -- which is
+#   the database behind the site that was there first. Checksum measured 181 MiB
+#   idle; 320 MiB leaves room for concurrent verifications and still cannot starve
+#   its neighbours.
+
+services:
+  app:
+    mem_limit: 320m
+    mem_reservation: 200m
+    # Restarting is always better than being killed: a container that exits under
+    # pressure comes back, while an OOM kill can take the neighbour with it.
+    restart: unless-stopped
+
+  caddy:
+    ports: !override
+      - "443:443"
+      - "443:443/udp"
+    mem_limit: 96m
+    volumes:
+      - ./Caddyfile.alpn:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
