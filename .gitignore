@@ -1,5 +1,6 @@
 # Konteks internal — jangan dikirim ke repo publik yang dinilai juri
 docs/
+CLAUDE.md
 
 # Secrets
 .env
