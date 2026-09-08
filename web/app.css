@@ -44,7 +44,11 @@
   --paper-deep: #07040C;
   --ink:        #F4F1F9;
   --ink-soft:   #B6ADC6;
-  --ink-faint:  #766D89;
+  /* Lifted from #766D89: the original sat at 3.8:1 on --paper-lift, under
+     WCAG AA's 4.5:1 for the small uppercase labels it carries throughout the
+     page (panel-note, colophon-meta, the rank-chart scale). This clears both
+     --paper (5.5:1) and the lighter --paper-lift (5.1:1) with headroom. */
+  --ink-faint:  #8A829C;
   --rule:       #2C2440;
   --rule-soft:  #1E1830;
 
@@ -99,6 +103,29 @@ body {
     radial-gradient(85% 55% at 50% 118%, rgba(76,134,255,.24), transparent 60%),
     var(--paper);
   background-attachment: fixed;
+  /* Firefox's scrollbar theming; the WebKit rules below cover Chrome/Safari.
+     A default light scrollbar track is the one thing standing out as
+     unthemed on an otherwise fully dark page. */
+  scrollbar-color: var(--rule) transparent;
+}
+
+::selection { background: rgba(124,92,252,.4); color: var(--ink); }
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  border-radius: 999px;
+  border: 3px solid var(--paper);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+
+/* A keyboard focus ring themed to match the button/input rings, rather than
+   the browser default -- which on this ground is a bright blue square that
+   clashes with everything around it. */
+:focus-visible {
+  outline: 2px solid var(--grad-2);
+  outline-offset: 2px;
 }
 
 em { font-style: normal; }
