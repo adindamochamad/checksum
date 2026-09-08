@@ -1,22 +1,26 @@
 /* Checksum
  *
- * A verification report, typeset as one.
+ * A verification report, lit like a dossier read at night.
  *
- * Type: two monospaces and nothing else. Checksum Doc (a slab-serif mono) carries
+ * Type: still two monospaces, unchanged. Checksum Doc (a slab-serif mono) carries
  * anything a person wrote; Checksum Data (a grotesque mono) carries anything that
  * came out of the warehouse -- SQL, values, ranks, row counts. The split is the
  * same one the page argues about, so it is worth being able to see: if it is set
- * in Data, a query returned it.
+ * in Data, a query returned it. The whole grid -- the rank chart, the preset rows,
+ * the receipt columns -- is measured in `ch`, which only lands on a consistent
+ * character grid in a monospace face, so the typeface stays even though the
+ * palette around it does not.
  *
  * Both are self-hosted and total 38 KB. Nothing loads from a third party.
  *
- * Colour: paper, ink, and one signal red. No second accent. State is carried by
- * weight, rule and fill rather than by hue, which is how a printed document does
- * it -- and it means the one red thing on screen is always the disagreement.
+ * Colour: near-black ground, three glows (violet, blue, pink) bleeding in from
+ * off-canvas, and the same signal red kept for exactly one job -- the moment a
+ * number disagrees with another number. The gradient is décor; red is still the
+ * only colour that means something. Rounded corners and pill badges replace the
+ * sharp-cornered "sheet of paper" this page used to be.
  *
- * Measure: this is a monospace page, so widths are set in `ch` and columns land on
- * a character grid. The headline breaks where it does because 21ch is exactly the
- * length of its second sentence, not because a breakpoint was tuned by eye.
+ * Measure: unchanged. The headline breaks where it does because 21ch is exactly
+ * the length of its second sentence, not because a breakpoint was tuned by eye.
  */
 
 @font-face {
@@ -34,18 +38,30 @@
 }
 
 :root {
-  /* Cold paper. Warm cream is the tell this design is avoiding. */
-  --paper:      #E4E7E7;
-  --paper-lift: #F1F3F3;
-  --paper-deep: #D7DBDB;
-  --ink:        #101416;
-  --ink-soft:   #454D50;
-  --ink-faint:  #7C8487;
-  --rule:       #BFC5C5;
-  --rule-soft:  #CFD4D4;
+  /* Near-black ground. Pure #000 read as a hole; this has a hair of violet in it. */
+  --paper:      #0B0712;
+  --paper-lift: #16101F;
+  --paper-deep: #07040C;
+  --ink:        #F4F1F9;
+  --ink-soft:   #B6ADC6;
+  --ink-faint:  #766D89;
+  --rule:       #2C2440;
+  --rule-soft:  #1E1830;
 
-  --signal:      #C4321C;
-  --signal-wash: #F0DDD8;
+  /* Red kept exactly as before: the one colour still reserved for meaning. */
+  --signal:      #FF5D6C;
+  --signal-wash: rgba(255, 93, 108, .14);
+
+  /* The three glows, doing the work EternaCloud's brand gradient does. Used for
+     headline emphasis, buttons, and the ambient light behind the page -- never
+     for anything that carries a finding, or the one red thing stops being the
+     only thing that means "look here". */
+  --grad-1: #7C5CFC;
+  --grad-2: #4C86FF;
+  --grad-3: #FF6FD1;
+  --grad-4: #FFB65C;
+  --grad-text: linear-gradient(95deg, var(--grad-2), var(--grad-1) 45%, var(--grad-3) 78%, var(--grad-4));
+  --grad-button: linear-gradient(135deg, var(--grad-1), var(--grad-2));
 
   --doc:  "Checksum Doc", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --data: "Checksum Data", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -68,15 +84,21 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  background: var(--paper);
   color: var(--ink);
   font-family: var(--doc);
   font-size: 15px;
   line-height: 1.6;
   font-weight: 400;
-  /* A faint horizontal ruling, like paper that expects to be written on. */
-  background-image: repeating-linear-gradient(
-    to bottom, transparent 0 27px, rgba(16,20,22,.028) 27px 28px);
+  /* The ruled-paper texture is gone -- it read as stationery, and this is no
+     longer stationery. In its place, three soft radials standing in for
+     EternaCloud's brand gradient: fixed, so the glow does not scroll with the
+     page and re-tile like a pattern would. */
+  background:
+    radial-gradient(60% 46% at 12% -8%,  rgba(124,92,252,.32), transparent 65%),
+    radial-gradient(65% 55% at 104% 6%,  rgba(255,111,209,.20), transparent 62%),
+    radial-gradient(85% 55% at 50% 118%, rgba(76,134,255,.24), transparent 60%),
+    var(--paper);
+  background-attachment: fixed;
 }
 
 em { font-style: normal; }
@@ -153,8 +175,9 @@ em { font-style: normal; }
   display: inline-grid;
   place-items: center;
   width: 1.5em; height: 1.5em;
-  background: var(--ink);
-  color: var(--paper);
+  border-radius: 50%;
+  background: var(--grad-button);
+  color: var(--paper-deep);
   font-size: .8em;
 }
 
@@ -207,7 +230,12 @@ em { font-style: normal; }
   max-width: 21ch;
 }
 
-.standfirst em { color: var(--signal); }
+.standfirst em {
+  background: var(--grad-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 
 .subhead {
   font-size: .95rem;
@@ -298,16 +326,19 @@ em { font-style: normal; }
   min-width: 0;
   font-family: var(--data);
   font-size: .95rem;
-  padding: .85rem 1.2ch;
+  padding: .85rem 1.4ch;
   color: var(--ink);
   background: var(--paper-lift);
-  border: 2px solid var(--ink);
-  border-radius: 0;              /* sharp corners; rounded-2xl everywhere is the tell */
+  border: 1px solid var(--rule);
+  border-radius: .9rem;
   outline: none;
 }
 
-#question:focus { box-shadow: inset 0 -3px 0 var(--signal); }
+#question:focus { box-shadow: 0 0 0 2px var(--paper-lift), 0 0 0 4px var(--grad-2); }
 
+/* A gradient pill, the one place a button gets the full brand treatment: this
+   is the call to action, same job the "See what you get" pill does on the
+   reference. */
 #run {
   font-family: var(--data);
   font-size: .78rem;
@@ -315,18 +346,19 @@ em { font-style: normal; }
   letter-spacing: .16em;
   text-transform: uppercase;
   padding: .85rem 3ch;
-  color: var(--paper-lift);
-  background: var(--ink);
-  border: 2px solid var(--ink);
-  border-radius: 0;
+  color: var(--ink);
+  background: var(--grad-button);
+  border: none;
+  border-radius: 999px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 1ch;
+  box-shadow: 0 8px 24px -8px rgba(124,92,252,.55);
 }
 
-#run:hover:not(:disabled) { background: var(--signal); border-color: var(--signal); }
-#run:disabled { background: var(--ink-faint); border-color: var(--ink-faint); cursor: progress; }
+#run:hover:not(:disabled) { filter: brightness(1.12); box-shadow: 0 10px 28px -6px rgba(124,92,252,.7); }
+#run:disabled { background: var(--rule); box-shadow: none; cursor: progress; }
 .run-count { opacity: .8; }
 
 .presets { display: grid; margin-top: 1.2rem; }
@@ -358,16 +390,16 @@ em { font-style: normal; }
 .preset {
   font-family: var(--data);
   font-size: .74rem;
-  padding: .35rem 1.2ch;
+  padding: .35rem 1.3ch;
   color: var(--ink-soft);
-  background: transparent;
+  background: var(--paper-lift);
   border: 1px solid var(--rule);
-  border-radius: 0;
+  border-radius: 999px;
   cursor: pointer;
 }
-.preset:hover { color: var(--paper-lift); background: var(--ink); border-color: var(--ink); }
+.preset:hover { color: var(--ink); background: var(--rule-soft); border-color: var(--grad-2); }
 .preset[data-cached]::after { content: " · cached"; color: var(--ink-faint); }
-.preset:hover[data-cached]::after { color: var(--paper-deep); }
+.preset:hover[data-cached]::after { color: var(--ink-faint); }
 
 .scope-banner {
   margin: 1.4rem 0 0;
@@ -382,13 +414,17 @@ em { font-style: normal; }
 
 /* ------------------------------------------------------------------- stage */
 
+/* The two panels used to be one uninterrupted sheet split by a single rule --
+   the sharp-cornered "one document" reading. They now sit apart as two cards
+   over the ambient glow, which is the reference's own benefit-box language:
+   floating panels, not a ruled page. */
 .stage {
   display: grid;
   /* Deliberately unequal. The standard agent does less, so it gets less room --
      the asymmetry is the argument, not decoration. */
   grid-template-columns: minmax(0, 4fr) minmax(0, 6fr);
-  gap: 0;
-  border-bottom: 2px solid var(--ink);
+  gap: 1.25rem;
+  padding: 0 var(--gutter) clamp(2rem, 4vw, 3rem);
 }
 
 @media (max-width: 62rem) {
@@ -396,17 +432,22 @@ em { font-style: normal; }
 }
 
 .panel {
-  padding: clamp(1.5rem, 3vw, 2.5rem) var(--gutter);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
   min-height: 26rem;
   display: flex;
   flex-direction: column;
+  border-radius: 1.25rem;
+  border: 1px solid var(--rule);
 }
 
-.panel-standard { background: var(--paper); border-right: 1px solid var(--rule); }
-.panel-checksum { background: var(--paper-lift); }
-
-@media (max-width: 62rem) {
-  .panel-standard { border-right: 0; border-bottom: 1px solid var(--rule); }
+.panel-standard { background: rgba(255,255,255,.02); }
+.panel-checksum {
+  background: var(--paper-lift);
+  /* The findings card is the one the page wants read first, so it is the one
+     that gets a hint of the brand glow along its edge -- same idea as the
+     reference's single highlighted "Onboarding" card in its row of four. */
+  border-color: rgba(124,92,252,.35);
+  box-shadow: 0 0 0 1px rgba(124,92,252,.08), 0 20px 60px -30px rgba(124,92,252,.5);
 }
 
 .panel-head { margin-bottom: 1.5rem; }
@@ -462,6 +503,7 @@ em { font-style: normal; }
   margin-top: 1.4rem;
   border: 1px solid var(--signal);
   border-left-width: 5px;
+  border-radius: .75rem;
   background: var(--signal-wash);
   padding: .85rem 1.4ch;
   font-size: .84rem;
@@ -536,7 +578,8 @@ em { font-style: normal; }
   text-transform: uppercase;
   color: var(--ink-faint);
   border: 1px solid var(--rule);
-  padding: 0 .6ch;
+  border-radius: 999px;
+  padding: 0 .8ch;
   margin-left: 1.2ch;
   vertical-align: .12em;
 }
@@ -575,7 +618,9 @@ em { font-style: normal; }
   padding: 1.2rem 1.6ch;
   border: 2px solid var(--signal);
   border-left-width: 8px;
+  border-radius: .9rem;
   background: var(--signal-wash);
+  box-shadow: 0 16px 40px -24px rgba(255,93,108,.6);
   /* Short, and downward: a stamp presses onto the page. Anything longer than
      this reads as a web animation rather than as a document being marked. */
   animation: stamp .26s cubic-bezier(.2,.8,.3,1) both;
@@ -591,7 +636,8 @@ em { font-style: normal; }
   top: -.62rem; left: 1.6ch;
   padding: 0 1ch;
   background: var(--signal);
-  color: var(--paper-lift);
+  color: var(--paper-deep);
+  border-radius: 999px;
   font-family: var(--data);
   font-size: .6rem;
   font-weight: 600;
@@ -731,11 +777,15 @@ em { font-style: normal; }
   background-repeat: no-repeat;
 }
 
-/* Square, not round. Nothing else on this page has a curve. */
+/* Round, to match the rest of the page now -- it used to be the one square mark
+   on an all-rectangular sheet; now it is the one hard-edged idea (a data point)
+   on an otherwise soft, glowing page, so it stays plain instead of picking up a
+   glow of its own. */
 .slope-dot {
   position: absolute; top: 50%;
-  width: .55rem; height: .55rem;
-  margin: -.275rem 0 0 -.275rem;
+  width: .6rem; height: .6rem;
+  border-radius: 50%;
+  margin: -.3rem 0 0 -.3rem;
   background: var(--ink);
   /* The delay is set per row in JS, so a dot lands as the wipe passes it. */
   transition: left .5s cubic-bezier(.2,.7,.3,1) var(--draw-delay, 0s);
@@ -745,8 +795,9 @@ em { font-style: normal; }
 .slope-row.is-mover .slope-label { color: var(--signal); font-weight: 600; }
 .slope-row.is-mover .slope-dot {
   background: var(--signal);
-  width: .85rem; height: .85rem;
-  margin: -.425rem 0 0 -.425rem;
+  width: .9rem; height: .9rem;
+  margin: -.45rem 0 0 -.45rem;
+  box-shadow: 0 0 0 4px var(--signal-wash);
 }
 
 .slope-rank { color: var(--ink); text-align: right; }
@@ -792,24 +843,25 @@ em { font-style: normal; }
 .receipt-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(46ch, 100%), 1fr));
-  gap: 1px;
+  gap: 1rem;
   margin-top: 2rem;
 }
 
-/* The rules are drawn by each card's own outward ring rather than by a tinted
-   grid showing through 1px gaps: an odd number of receipts leaves an empty cell,
-   and a tinted grid renders that hole as a solid block of colour.
+/* Real cards with a real gap now that the page has settled on "floating card"
+   as its grammar -- the old 1px-hairline-grid trick existed only to fake a
+   border on a sheet with no gaps to put one in.
    min-width:0 or the wide SQL below stretches this grid item instead of scrolling
    inside it, and the whole page gains a horizontal scrollbar on a phone. */
 .receipt {
-  background: var(--paper);
-  box-shadow: 0 0 0 1px var(--rule);
+  background: var(--paper-lift);
+  border: 1px solid var(--rule);
+  border-radius: 1rem;
   padding: 1.1rem 1.6ch 1.3rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
-.receipt.is-target { box-shadow: 0 0 0 2px var(--signal); }
+.receipt.is-target { border-color: var(--signal); box-shadow: 0 0 0 1px var(--signal); }
 
 .receipt-top {
   display: flex;
@@ -825,8 +877,9 @@ em { font-style: normal; }
   font-size: .66rem;
   font-weight: 600;
   letter-spacing: .1em;
-  color: var(--paper-lift);
+  color: var(--paper-deep);
   background: var(--ink);
+  border-radius: 999px;
   padding: 0 .8ch;
 }
 .receipt-name { font-weight: 700; font-size: .88rem; }
@@ -838,6 +891,7 @@ em { font-style: normal; }
   text-transform: uppercase;
   color: var(--ink-faint);
   border: 1px solid var(--rule);
+  border-radius: 999px;
   padding: 0 .6ch;
 }
 .receipt-rows {
@@ -856,6 +910,7 @@ em { font-style: normal; }
   text-transform: uppercase;
   color: var(--ink);
   background: var(--paper-deep);
+  border-radius: .4rem;
   padding: .3rem .9ch;
   margin: 0 0 .7rem;
 }
@@ -864,8 +919,11 @@ em { font-style: normal; }
   font-family: var(--data);
   font-size: .72rem;
   line-height: 1.6;
-  background: var(--paper-lift);
+  /* Deepest tone on the page, so the code reads as an inset terminal sunk into
+     the lighter receipt card around it, instead of matching it flat. */
+  background: var(--paper-deep);
   border: 1px solid var(--rule);
+  border-radius: .6rem;
   padding: .8rem 1.1ch;
   overflow-x: auto;
   white-space: pre;
@@ -879,8 +937,9 @@ em { font-style: normal; }
   content: "copied";
   position: absolute; top: .45rem; right: .8ch;
   font-size: .62rem; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--paper-lift);
+  color: var(--paper-deep);
   background: var(--ink);
+  border-radius: 999px;
   padding: 0 .7ch;
 }
 
@@ -888,7 +947,7 @@ em { font-style: normal; }
    grey noise and eight queries a reader can actually compare at a glance. With a
    single accent available, keywords carry weight instead of colour. */
 .sql .t-kw  { color: var(--ink); font-weight: 700; }
-.sql .t-fn  { color: var(--ink); }
+.sql .t-fn  { color: var(--grad-2); }
 .sql .t-str { color: var(--signal); }
 .sql .t-num { color: var(--signal); }
 .sql .t-com { color: var(--ink-faint); }
