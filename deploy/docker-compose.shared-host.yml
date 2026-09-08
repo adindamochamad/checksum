@@ -9,14 +9,22 @@
 #
 #   A hard memory limit. On a 1 GB box already running MySQL, an unbounded container
 #   invites the OOM killer, and the OOM killer picks the largest process -- which is
-#   the database behind the site that was there first. Checksum measured 181 MiB
-#   idle; 320 MiB leaves room for concurrent verifications and still cannot starve
-#   its neighbours.
+#   the database behind the site that was there first.
+#
+#   320m was set against an early 181 MiB idle reading. Idle drifted to ~282 MiB
+#   over the following weeks (four persistent MCP stdio sessions, not a leak in the
+#   app itself), which put the container at 88% of its own limit with no margin for
+#   a verification's transient allocation -- exactly the kind of thing that should
+#   not go wrong unattended during a two-week judging window. Measured on 8 Sep with
+#   the site live: mywebsite_db actually runs ~25 MiB, not the ~350 MiB this file
+#   originally budgeted around, and the 957 MiB host had 285 MiB available plus
+#   1.6 GB of untouched swap. 448m gives Checksum real headroom while still leaving
+#   more room for its neighbours than they have ever been observed to use.
 
 services:
   app:
-    mem_limit: 320m
-    mem_reservation: 200m
+    mem_limit: 448m
+    mem_reservation: 256m
     # Restarting is always better than being killed: a container that exits under
     # pressure comes back, while an OOM kill can take the neighbour with it.
     restart: unless-stopped

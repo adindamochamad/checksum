@@ -390,6 +390,17 @@ em { font-style: normal; }
 
 .presets { display: grid; margin-top: 1.2rem; }
 
+/* Disclosed, not hidden: the free tier is 20 requests a day, and a preset never
+   touches it -- it replays a run that already happened. Anyone who types their
+   own question instead should know that before they hit it, not after. */
+.quota-note {
+  margin: 1rem 0 0;
+  font-size: .74rem;
+  line-height: 1.6;
+  color: var(--ink-faint);
+  max-width: 68ch;
+}
+
 .preset-group {
   display: grid;
   grid-template-columns: 20ch minmax(0, 1fr);
