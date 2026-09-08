@@ -1,45 +1,62 @@
 /* Checksum
  *
- * Palette: paper and ink, with one cold blue for the verified side and one rust for
- * disagreement. Nothing trendy -- a tool that audits numbers should not look like it
- * is selling something. No purple gradient, no glass, no Tailwind defaults.
+ * A verification report, typeset as one.
  *
- * Type: Instrument Serif for display, IBM Plex Sans for prose, IBM Plex Mono for
- * anything that came out of the warehouse. SQL is the product here, so mono is a
- * first-class voice rather than a code-block afterthought.
+ * Type: two monospaces and nothing else. Checksum Doc (a slab-serif mono) carries
+ * anything a person wrote; Checksum Data (a grotesque mono) carries anything that
+ * came out of the warehouse -- SQL, values, ranks, row counts. The split is the
+ * same one the page argues about, so it is worth being able to see: if it is set
+ * in Data, a query returned it.
  *
- * Layout: sections run the full width behind their gutters and rules reach both
- * edges, broadsheet-style. Nothing is centred in a narrow column with empty space
- * either side; measure is held by the text blocks themselves, not by the page.
+ * Both are self-hosted and total 38 KB. Nothing loads from a third party.
+ *
+ * Colour: paper, ink, and one signal red. No second accent. State is carried by
+ * weight, rule and fill rather than by hue, which is how a printed document does
+ * it -- and it means the one red thing on screen is always the disagreement.
+ *
+ * Measure: this is a monospace page, so widths are set in `ch` and columns land on
+ * a character grid. The headline breaks where it does because 21ch is exactly the
+ * length of its second sentence, not because a breakpoint was tuned by eye.
  */
 
+@font-face {
+  font-family: "Checksum Doc";
+  src: url("/fonts/checksum-doc.woff2") format("woff2-variations");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Checksum Data";
+  src: url("/fonts/checksum-data.woff2") format("woff2-variations");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
 :root {
-  --paper:      #F4F2ED;
-  --paper-deep: #EAE6DE;
-  --paper-lift: #FBFAF7;
-  --ink:        #16181C;
-  --ink-soft:   #4A4E57;
-  --ink-faint:  #8C8F97;
-  --rule:       #D9D4C9;
-  --rule-soft:  #E5E1D7;
+  /* Cold paper. Warm cream is the tell this design is avoiding. */
+  --paper:      #E4E7E7;
+  --paper-lift: #F1F3F3;
+  --paper-deep: #D7DBDB;
+  --ink:        #101416;
+  --ink-soft:   #454D50;
+  --ink-faint:  #7C8487;
+  --rule:       #BFC5C5;
+  --rule-soft:  #CFD4D4;
 
-  --deep:       #1E3A5F;   /* the verified side */
-  --deep-wash:  #E7ECF3;
-  --rust:       #A8442A;   /* disagreement */
-  --rust-wash:  #F6E9E4;
-  --olive:      #5A6141;   /* guards, quiet confirmations */
+  --signal:      #C4321C;
+  --signal-wash: #F0DDD8;
 
-  --serif: "Instrument Serif", Georgia, serif;
-  --sans:  "IBM Plex Sans", system-ui, sans-serif;
-  --mono:  "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --doc:  "Checksum Doc", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --data: "Checksum Data", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --gutter: clamp(1.25rem, 4.5vw, 5rem);
+  --gutter: clamp(1.1rem, 4vw, 4.5rem);
 
   /* One shared column geometry for the rank chart, so the connecting line can be
      positioned against the same track the dots sit in. */
-  --slope-label: 16.5rem;
-  --slope-rank:  3.5rem;
-  --slope-gap:   1.25rem;
+  --slope-label: 32ch;
+  --slope-rank:  5ch;
+  --slope-gap:   1.5ch;
 }
 
 * { box-sizing: border-box; }
@@ -53,264 +70,287 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--sans);
-  font-size: 16px;
-  line-height: 1.55;
-  /* Faint paper grain. Flat off-white reads as "unstyled"; this reads as chosen. */
-  background-image: radial-gradient(rgba(22,24,28,.022) 1px, transparent 1px);
-  background-size: 3px 3px;
+  font-family: var(--doc);
+  font-size: 15px;
+  line-height: 1.6;
+  font-weight: 400;
+  /* A faint horizontal ruling, like paper that expects to be written on. */
+  background-image: repeating-linear-gradient(
+    to bottom, transparent 0 27px, rgba(16,20,22,.028) 27px 28px);
 }
 
-em { font-style: italic; }
+em { font-style: normal; }
+
+/* The clause number in front of a heading. A report numbers its sections; this is
+   the cheapest way to say "document" and it doubles as a wayfinder. */
+.clause {
+  font-family: var(--data);
+  font-weight: 500;
+  color: var(--signal);
+  letter-spacing: .04em;
+  margin-right: .85ch;
+}
+.clause::before { content: "§"; opacity: .55; margin-right: .35ch; }
 
 /* Shared section heading, used by movement and receipts. */
-.section-head { max-width: 60ch; }
+.section-head { max-width: 62ch; }
 
 .section-head h3 {
-  font-family: var(--serif);
-  font-size: clamp(1.5rem, 3vw, 2.15rem);
-  line-height: 1.05;
-  letter-spacing: -0.015em;
+  font-family: var(--doc);
+  font-weight: 600;
+  font-size: clamp(1.05rem, 2.1vw, 1.45rem);
+  line-height: 1.25;
+  letter-spacing: -0.005em;
   margin: 0;
 }
 
 .section-head p {
   color: var(--ink-soft);
-  margin: .6rem 0 0;
+  font-size: .88rem;
+  margin: .7rem 0 0;
 }
 
 /* ---------------------------------------------------------------- masthead */
 
-.masthead { padding: clamp(2rem, 5vw, 3.25rem) var(--gutter) 0; }
+.masthead { padding: 0 var(--gutter); }
 
-.mark {
+/* The strip across the top of a filed document: who issued it, what it is. */
+.docbar {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  font-family: var(--mono);
-  font-size: .78rem;
-  letter-spacing: .16em;
+  gap: 1.5ch;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--data);
+  font-size: .7rem;
+  letter-spacing: .18em;
   text-transform: uppercase;
   color: var(--ink-soft);
+}
+
+.docbar-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 1ch;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .mark-glyph {
   display: inline-grid;
   place-items: center;
-  width: 1.35rem; height: 1.35rem;
-  border: 1.5px solid var(--deep);
-  color: var(--deep);
-  font-size: .7rem;
+  width: 1.5em; height: 1.5em;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: .8em;
 }
 
-/* The rule pushes the provenance tag to the far edge, so the masthead spans the
-   page instead of trailing off after the wordmark. */
-.mark-rule { flex: 1; height: 1px; background: var(--rule); }
+.docbar-rule { flex: 1; height: 1px; background: var(--rule); }
+.docbar-kind { color: var(--ink-faint); }
+.docbar-meta { color: var(--ink-faint); }
 
-.mark-tag {
-  font-size: .68rem;
-  letter-spacing: .14em;
-  color: var(--ink-faint);
-}
-
-@media (max-width: 40rem) {
-  .mark-rule, .mark-tag { display: none; }
+@media (max-width: 46rem) {
+  .docbar-rule, .docbar-meta { display: none; }
+  .docbar-kind { margin-left: auto; }
 }
 
 .mast-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
-  gap: clamp(2rem, 5vw, 5rem);
-  align-items: end;
-  padding: clamp(1.75rem, 4vw, 3rem) 0 clamp(2rem, 4vw, 3rem);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
+  gap: clamp(2rem, 5vw, 6ch);
+  align-items: start;
+  padding: clamp(2rem, 5vw, 3.5rem) 0 clamp(2rem, 4vw, 3rem);
 }
 
 @media (max-width: 62rem) {
-  .mast-grid { grid-template-columns: 1fr; align-items: start; gap: 2.5rem; }
+  .mast-grid { grid-template-columns: 1fr; gap: 2.5rem; }
 }
 
+/* 21ch is the exact length of "THE NUMBER WAS WRONG." -- in a monospace the
+   measure and the line break are the same decision. */
 .standfirst {
-  font-family: var(--serif);
-  font-weight: 400;
-  /* Tight and large: display type earns its space by being unmistakably display type. */
-  font-size: clamp(2.6rem, 6.6vw, 5.5rem);
-  line-height: .95;
-  letter-spacing: -0.022em;
+  font-family: var(--doc);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 4.4vw, 3.1rem);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
   margin: 0;
   max-width: 21ch;
 }
 
-.standfirst em { color: var(--rust); }
+.standfirst em { color: var(--signal); }
 
 .subhead {
-  font-size: clamp(1rem, 1.5vw, 1.14rem);
+  font-size: .95rem;
   color: var(--ink-soft);
-  max-width: 44ch;
-  margin: 1.4rem 0 0;
+  max-width: 52ch;
+  margin: 1.6rem 0 0;
+  padding-left: 1.5ch;
+  border-left: 2px solid var(--rule);
 }
 
-.subhead span { font-family: var(--mono); color: var(--ink); }
+.subhead span { font-family: var(--data); color: var(--ink); font-weight: 500; }
 
-/* The aside carries the vocabulary the readings list assumes. It is the reason the
-   hero fills the page: substance in the second column, not decoration. */
 .mast-aside {
-  border-top: 1.5px solid var(--ink);
-  padding-top: 1.1rem;
-  max-width: 40ch;
+  border-top: 2px solid var(--ink);
+  padding-top: 1rem;
+  max-width: 46ch;
 }
 
 .aside-label {
-  font-family: var(--mono);
+  font-family: var(--data);
   font-size: .68rem;
   letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  margin: 0 0 1rem;
+  margin: 0 0 .9rem;
 }
 
 .lexicon { margin: 0; }
 
 .lex-row {
   display: grid;
-  grid-template-columns: 6.5rem minmax(0, 1fr);
-  gap: .9rem;
-  padding: .7rem 0;
+  grid-template-columns: 11ch minmax(0, 1fr);
+  gap: 1.5ch;
+  padding: .6rem 0;
   border-bottom: 1px solid var(--rule-soft);
 }
 
 .lex-row dt {
-  font-family: var(--mono);
-  font-size: .7rem;
+  font-family: var(--data);
+  font-size: .66rem;
+  font-weight: 600;
   letter-spacing: .1em;
   text-transform: uppercase;
-  padding-top: .12rem;
+  padding-top: .3em;
+  color: var(--ink);
 }
-.lex-row dt[data-cat="definition"] { color: var(--deep); }
-.lex-row dt[data-cat="dedup"]      { color: var(--rust); }
-.lex-row dt[data-cat="guard"]      { color: var(--olive); }
+.lex-row dt[data-cat="dedup"] { color: var(--signal); }
+.lex-row dt[data-cat="guard"] { color: var(--ink-faint); }
 
 .lex-row dd {
   margin: 0;
-  font-size: .84rem;
-  line-height: 1.5;
+  font-size: .8rem;
+  line-height: 1.55;
   color: var(--ink-soft);
 }
-.lex-row dd em { color: var(--ink); font-style: italic; }
+.lex-row dd em { color: var(--ink); font-weight: 600; }
 
 .aside-foot {
-  font-size: .8rem;
-  line-height: 1.5;
+  font-size: .78rem;
+  line-height: 1.55;
   color: var(--ink-faint);
-  margin: 1rem 0 0;
+  margin: .9rem 0 0;
 }
 
 /* --------------------------------------------------------------------- ask */
 
 .ask {
-  padding: clamp(1.75rem, 4vw, 2.75rem) var(--gutter) clamp(2rem, 4vw, 3rem);
-  border-top: 1px solid var(--rule);
+  padding: clamp(1.5rem, 3.5vw, 2.25rem) var(--gutter) clamp(1.75rem, 4vw, 2.5rem);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--rule);
   background: var(--paper-deep);
 }
 
 .ask-label {
   display: block;
-  font-family: var(--mono);
-  font-size: .72rem;
+  font-family: var(--data);
+  font-size: .7rem;
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  margin-bottom: .65rem;
+  margin-bottom: .7rem;
 }
 
-.ask-row { display: flex; gap: .75rem; flex-wrap: wrap; }
+.ask-row { display: flex; gap: 1ch; flex-wrap: wrap; }
 
 #question {
-  flex: 1 1 24rem;
+  flex: 1 1 34ch;
   min-width: 0;
-  font-family: var(--mono);
-  font-size: 1rem;
-  padding: .95rem 1.05rem;
+  font-family: var(--data);
+  font-size: .95rem;
+  padding: .85rem 1.2ch;
   color: var(--ink);
   background: var(--paper-lift);
-  border: 1.5px solid var(--ink);
+  border: 2px solid var(--ink);
   border-radius: 0;              /* sharp corners; rounded-2xl everywhere is the tell */
   outline: none;
-  transition: box-shadow .16s ease;
 }
 
-#question:focus { box-shadow: 4px 4px 0 var(--deep); }
+#question:focus { box-shadow: inset 0 -3px 0 var(--signal); }
 
 #run {
-  font-family: var(--mono);
-  font-size: .85rem;
-  letter-spacing: .1em;
+  font-family: var(--data);
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .16em;
   text-transform: uppercase;
-  padding: .95rem 1.9rem;
-  color: var(--paper);
+  padding: .85rem 3ch;
+  color: var(--paper-lift);
   background: var(--ink);
-  border: 1.5px solid var(--ink);
+  border: 2px solid var(--ink);
   border-radius: 0;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: .6rem;
-  transition: transform .12s ease, background .16s ease;
+  gap: 1ch;
 }
 
-#run:hover:not(:disabled) { background: var(--deep); border-color: var(--deep); transform: translate(-2px, -2px); box-shadow: 3px 3px 0 var(--ink); }
+#run:hover:not(:disabled) { background: var(--signal); border-color: var(--signal); }
 #run:disabled { background: var(--ink-faint); border-color: var(--ink-faint); cursor: progress; }
-.run-count { font-variant-numeric: tabular-nums; opacity: .85; }
+.run-count { opacity: .8; }
 
-.presets { display: grid; gap: .4rem; margin-top: 1.1rem; }
+.presets { display: grid; margin-top: 1.2rem; }
 
 .preset-group {
   display: grid;
-  grid-template-columns: 10rem minmax(0, 1fr);
+  grid-template-columns: 20ch minmax(0, 1fr);
   align-items: start;
-  gap: .5rem 1rem;
-  padding: .5rem 0;
+  gap: .4rem 1.5ch;
+  padding: .55rem 0;
   border-top: 1px solid var(--rule);
 }
 
-@media (max-width: 46rem) {
-  .preset-group { grid-template-columns: 1fr; gap: .4rem; }
+@media (max-width: 52rem) {
+  .preset-group { grid-template-columns: 1fr; }
 }
 
 .preset-group-name {
-  font-family: var(--mono);
-  font-size: .66rem;
-  letter-spacing: .12em;
+  font-family: var(--data);
+  font-size: .64rem;
+  letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  padding-top: .45rem;
+  padding-top: .5rem;
 }
 
 .preset-group-items { display: flex; flex-wrap: wrap; gap: .4rem; }
 
 .preset {
-  font-family: var(--mono);
-  font-size: .76rem;
-  padding: .4rem .75rem;
+  font-family: var(--data);
+  font-size: .74rem;
+  padding: .35rem 1.2ch;
   color: var(--ink-soft);
-  background: var(--paper-lift);
+  background: transparent;
   border: 1px solid var(--rule);
   border-radius: 0;
   cursor: pointer;
-  transition: color .14s ease, border-color .14s ease, background .14s ease;
 }
-.preset:hover { color: var(--deep); border-color: var(--deep); background: var(--paper); }
-.preset[data-cached]::after { content: " · cached"; color: var(--olive); }
+.preset:hover { color: var(--paper-lift); background: var(--ink); border-color: var(--ink); }
+.preset[data-cached]::after { content: " · cached"; color: var(--ink-faint); }
+.preset:hover[data-cached]::after { color: var(--paper-deep); }
 
 .scope-banner {
   margin: 1.4rem 0 0;
-  padding-left: .9rem;
-  border-left: 2px solid var(--deep);
-  font-size: .86rem;
+  padding-left: 1.5ch;
+  border-left: 2px solid var(--ink);
+  font-size: .84rem;
   color: var(--ink-soft);
-  max-width: 68ch;
+  max-width: 76ch;
 }
-.scope-banner b { color: var(--deep); font-weight: 600; }
-.scope-banner i { color: var(--rust); font-style: normal; }
+.scope-banner b { color: var(--ink); font-weight: 700; }
+.scope-banner i { color: var(--signal); font-style: normal; }
 
 /* ------------------------------------------------------------------- stage */
 
@@ -319,10 +359,8 @@ em { font-style: italic; }
   /* Deliberately unequal. The standard agent does less, so it gets less room --
      the asymmetry is the argument, not decoration. */
   grid-template-columns: minmax(0, 4fr) minmax(0, 6fr);
-  gap: 1px;
-  background: var(--rule);
-  border-top: 1.5px solid var(--ink);
-  border-bottom: 1.5px solid var(--ink);
+  gap: 0;
+  border-bottom: 2px solid var(--ink);
 }
 
 @media (max-width: 62rem) {
@@ -330,114 +368,121 @@ em { font-style: italic; }
 }
 
 .panel {
-  background: var(--paper);
-  padding: clamp(1.75rem, 3vw, 2.75rem) var(--gutter);
+  padding: clamp(1.5rem, 3vw, 2.5rem) var(--gutter);
   min-height: 26rem;
   display: flex;
   flex-direction: column;
 }
 
+.panel-standard { background: var(--paper); border-right: 1px solid var(--rule); }
 .panel-checksum { background: var(--paper-lift); }
 
-.panel-head { margin-bottom: 1.6rem; }
+@media (max-width: 62rem) {
+  .panel-standard { border-right: 0; border-bottom: 1px solid var(--rule); }
+}
+
+.panel-head { margin-bottom: 1.5rem; }
 
 .panel-kicker {
   display: block;
-  font-family: var(--mono);
+  font-family: var(--data);
   font-size: .66rem;
   letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  margin-bottom: .35rem;
+  margin-bottom: .45rem;
 }
 
 .panel h2 {
-  font-family: var(--serif);
-  font-weight: 400;
-  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
-  line-height: 1.05;
-  letter-spacing: -0.015em;
+  font-family: var(--doc);
+  font-weight: 700;
+  font-size: clamp(1.15rem, 2.2vw, 1.5rem);
+  line-height: 1.2;
+  letter-spacing: .01em;
+  text-transform: uppercase;
   margin: 0;
 }
 
 .panel-standard h2 { color: var(--ink-soft); }
-.panel-checksum h2 { color: var(--deep); }
 
 .panel-note {
-  font-family: var(--mono);
-  font-size: .76rem;
+  font-family: var(--data);
+  font-size: .74rem;
   color: var(--ink-faint);
-  margin: .4rem 0 0;
-  max-width: 44ch;
+  margin: .45rem 0 0;
+  max-width: 46ch;
 }
 
 .panel-body { flex: 1; }
 
-/* The empty state is a ruled placeholder rather than a lone word floating in a
-   tall box -- an idle panel should look composed, not broken. */
 .idle {
-  font-family: var(--mono);
-  font-size: .8rem;
-  letter-spacing: .06em;
+  font-family: var(--data);
+  font-size: .78rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
   color: var(--ink-faint);
   border-top: 1px solid var(--rule-soft);
   border-bottom: 1px solid var(--rule-soft);
-  padding: 1.1rem 0;
+  padding: 1.2rem 0;
   margin: 0;
 }
 
-.answer { white-space: pre-wrap; margin: 0; font-size: .96rem; }
-.answer strong { font-weight: 600; }
+.answer { white-space: pre-wrap; margin: 0; font-size: .9rem; }
+.answer strong { font-weight: 700; }
 
 .audit {
   margin-top: 1.4rem;
-  border-left: 3px solid var(--rust);
-  background: var(--rust-wash);
-  padding: .85rem 1rem;
-  font-size: .88rem;
+  border: 1px solid var(--signal);
+  border-left-width: 5px;
+  background: var(--signal-wash);
+  padding: .85rem 1.4ch;
+  font-size: .84rem;
 }
 .audit b {
   display: block;
-  font-family: var(--mono);
-  font-size: .7rem;
-  letter-spacing: .12em;
+  font-family: var(--data);
+  font-size: .66rem;
+  font-weight: 600;
+  letter-spacing: .16em;
   text-transform: uppercase;
-  color: var(--rust);
-  margin-bottom: .3rem;
+  color: var(--signal);
+  margin-bottom: .35rem;
 }
 
 .panel-foot {
   display: flex;
-  gap: 1.75rem;
+  gap: 4ch;
   margin-top: 1.75rem;
-  padding-top: .9rem;
-  border-top: 1px solid var(--rule);
-  font-family: var(--mono);
-  font-size: .76rem;
+  padding-top: .8rem;
+  border-top: 2px solid var(--ink);
+  font-family: var(--data);
+  font-size: .7rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
   color: var(--ink-faint);
 }
-.panel-foot b { color: var(--ink); font-size: .95rem; font-variant-numeric: tabular-nums; }
+.panel-foot b { color: var(--ink); font-size: 1.15em; font-weight: 600; }
 
 /* ---------------------------------------------------------------- readings */
 
-.readings { list-style: none; margin: 0; padding: 0; }
+.readings { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
 
 .reading {
   display: grid;
-  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+  grid-template-columns: 3ch minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: .9rem;
-  padding: .62rem .55rem;
-  margin-inline: -.55rem;
+  gap: 1.5ch;
+  padding: .55rem 1ch;
+  margin-inline: -1ch;
   border-bottom: 1px solid var(--rule-soft);
-  font-size: .92rem;
+  font-size: .86rem;
   /* Each reading lands when its query returns, so the stagger is real timing,
      not a canned animation delay. */
-  animation: land .34s cubic-bezier(.2,.7,.3,1) both;
+  animation: land .3s cubic-bezier(.2,.7,.3,1) both;
 }
 
 @keyframes land {
-  from { opacity: 0; transform: translateY(.55rem); }
+  from { opacity: 0; transform: translateY(.4rem); }
   to   { opacity: 1; transform: none; }
 }
 
@@ -446,33 +491,33 @@ em { font-style: italic; }
 }
 
 .reading-index {
-  font-family: var(--mono);
+  font-family: var(--data);
   font-size: .72rem;
   color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
 }
 
 .reading-name { cursor: pointer; }
-.reading-name:hover { color: var(--deep); text-decoration: underline; text-underline-offset: .2em; }
+.reading-name:hover { text-decoration: underline; text-underline-offset: .25em; }
 
-/* The category is the second axis of the list and needs to be scannable down the
-   column, so it gets a chip rather than trailing grey text. */
 .reading-cat {
   display: inline-block;
-  font-family: var(--mono);
-  font-size: .6rem;
-  letter-spacing: .1em;
+  font-family: var(--data);
+  font-size: .58rem;
+  font-weight: 600;
+  letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--ink-faint);
   border: 1px solid var(--rule);
-  padding: .05rem .35rem;
-  margin-left: .55rem;
-  vertical-align: .1em;
+  padding: 0 .6ch;
+  margin-left: 1.2ch;
+  vertical-align: .12em;
 }
 
+/* Warehouse values are set in the data face throughout, so it is always visible
+   which words on this page a query produced. */
 .reading-leader {
-  font-family: var(--mono);
-  font-size: .82rem;
+  font-family: var(--data);
+  font-size: .78rem;
   text-align: right;
   color: var(--ink-soft);
 }
@@ -480,47 +525,67 @@ em { font-style: italic; }
 /* The policy reading is the one the studio actually agreed to. It should be
    impossible to miss in a list of nine near-identical rows. */
 .reading.is-policy {
-  background: var(--deep-wash);
-  border-bottom-color: var(--deep);
-  box-shadow: inset 3px 0 0 var(--deep);
+  background: var(--ink);
+  border-bottom-color: var(--ink);
+  color: var(--paper-lift);
 }
-.reading.is-policy .reading-name { font-weight: 600; }
-.reading.is-policy .reading-cat { border-color: var(--deep); color: var(--deep); }
-.reading.is-policy .reading-leader { color: var(--deep); font-weight: 600; }
+.reading.is-policy .reading-index { color: var(--paper-deep); }
+.reading.is-policy .reading-name { font-weight: 700; }
+.reading.is-policy .reading-cat { border-color: var(--paper-deep); color: var(--paper-deep); }
+.reading.is-policy .reading-leader { color: var(--paper-lift); font-weight: 600; }
 
-.reading.is-guard .reading-cat { border-color: var(--olive); color: var(--olive); }
-.reading.is-guard .reading-leader { color: var(--olive); }
-.reading.is-error .reading-leader { color: var(--rust); }
+.reading.is-guard .reading-leader { color: var(--ink-faint); }
+.reading.is-error .reading-leader { color: var(--signal); }
 
 /* ----------------------------------------------------------------- verdict */
 
+/* Stamped rather than styled: a double rule, a label in the margin, and the one
+   piece of red on the page that is not a section number. */
 .verdict {
-  margin-top: 1.9rem;
-  padding: 1.2rem 1.35rem;
-  border: 1.5px solid var(--rust);
-  border-left-width: 5px;
-  background: var(--rust-wash);
+  position: relative;
+  margin-top: 2rem;
+  padding: 1.2rem 1.6ch;
+  border: 2px solid var(--signal);
+  border-left-width: 8px;
+  background: var(--signal-wash);
 }
-.verdict.is-stable { border-color: var(--olive); background: #EDF0E6; }
-.verdict.is-refused { border-color: var(--ink); background: var(--paper-deep); }
+.verdict::before {
+  content: "Finding";
+  position: absolute;
+  top: -.62rem; left: 1.6ch;
+  padding: 0 1ch;
+  background: var(--signal);
+  color: var(--paper-lift);
+  font-family: var(--data);
+  font-size: .6rem;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.verdict.is-stable { border-color: var(--ink); background: var(--paper-deep); }
+.verdict.is-stable::before { content: "Confirmed"; background: var(--ink); }
+.verdict.is-refused { border-color: var(--ink-faint); background: var(--paper-deep); }
+.verdict.is-refused::before { content: "Refused"; background: var(--ink-faint); }
 
 .verdict-head {
-  font-family: var(--serif);
-  font-weight: 400;
-  font-size: clamp(1.3rem, 2.2vw, 1.7rem);
-  line-height: 1.1;
-  letter-spacing: -0.01em;
+  font-family: var(--doc);
+  font-weight: 700;
+  font-size: clamp(.98rem, 1.8vw, 1.2rem);
+  line-height: 1.3;
   margin: 0;
 }
-.verdict-detail { font-size: .9rem; color: var(--ink-soft); margin: .55rem 0 0; }
+.verdict-detail { font-size: .84rem; color: var(--ink-soft); margin: .6rem 0 0; }
 
 .explanation {
-  margin-top: 1.25rem;
-  font-size: .96rem;
+  margin-top: 1.3rem;
+  padding-left: 1.5ch;
+  border-left: 1px solid var(--rule);
+  font-size: .88rem;
   white-space: pre-wrap;
-  max-width: 62ch;
+  max-width: 72ch;
+  color: var(--ink-soft);
 }
-.explanation strong { color: var(--deep); }
+.explanation strong { color: var(--ink); font-weight: 700; }
 
 /* ---------------------------------------------------------------- movement
  *
@@ -529,8 +594,8 @@ em { font-style: italic; }
  * a line joining the dots so the drop reads as a cliff.
  */
 
-.movement { padding: clamp(2.5rem, 5vw, 4rem) var(--gutter); }
-.movement-note { max-width: 58ch; }
+.movement { padding: clamp(2.25rem, 5vw, 3.5rem) var(--gutter); }
+.movement-note { max-width: 62ch; }
 
 .slope-scale,
 .slope-row {
@@ -541,17 +606,31 @@ em { font-style: italic; }
 }
 
 .slope-scale {
-  margin-top: 2.25rem;
-  font-family: var(--mono);
-  font-size: .66rem;
-  letter-spacing: .1em;
-  text-transform: uppercase;
+  margin-top: 2rem;
   color: var(--ink-faint);
-  padding-bottom: .5rem;
-  border-bottom: 1.5px solid var(--ink);
+  padding-bottom: .45rem;
+  border-bottom: 2px solid var(--ink);
 }
-.slope-scale-ends { display: flex; justify-content: space-between; }
+.slope-scale-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: .85em;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
 .slope-scale-right { text-align: right; }
+
+/* Every column on this chart is measured in `ch`, and `ch` depends on both the
+   font family AND the font size of the element it is resolved against. The scale
+   row, the data rows and the absolutely-positioned lane are three different
+   elements that must land on the same grid, so the geometry font is declared once
+   here for all of them and nothing below is allowed to change it. Setting it per
+   row instead is what made the connecting line miss the dots. */
+.slope-scale,
+.slope {
+  font-family: var(--data);
+  font-size: .74rem;
+}
 
 .slope { display: grid; position: relative; }
 
@@ -575,18 +654,13 @@ em { font-style: italic; }
 }
 .slope-line polyline {
   fill: none;
-  stroke: var(--rust);
+  stroke: var(--signal);
   stroke-width: 1.5;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
-  opacity: .55;
 }
 
-.slope-row {
-  font-family: var(--mono);
-  font-size: .78rem;
-  min-height: 2.5rem;
-}
+.slope-row { min-height: 2.4rem; }
 .slope-row + .slope-row { border-top: 1px solid var(--rule-soft); }
 
 .slope-label {
@@ -604,123 +678,137 @@ em { font-style: italic; }
   background-image: repeating-linear-gradient(
     to right, var(--rule) 0 1px, transparent 1px var(--slope-tick, 12.5%));
   background-position: center;
-  background-size: 100% 1.75rem;
+  background-size: 100% 1.6rem;
   background-repeat: no-repeat;
 }
 
+/* Square, not round. Nothing else on this page has a curve. */
 .slope-dot {
   position: absolute; top: 50%;
-  width: .62rem; height: .62rem;
-  margin: -.31rem 0 0 -.31rem;
-  background: var(--deep);
-  border-radius: 50%;
+  width: .55rem; height: .55rem;
+  margin: -.275rem 0 0 -.275rem;
+  background: var(--ink);
   transition: left .5s cubic-bezier(.2,.7,.3,1);
   z-index: 1;
 }
-.slope-row.is-mover { background: var(--rust-wash); }
-.slope-row.is-mover .slope-label { color: var(--rust); }
+.slope-row.is-mover { background: var(--signal-wash); }
+.slope-row.is-mover .slope-label { color: var(--signal); font-weight: 600; }
 .slope-row.is-mover .slope-dot {
-  background: var(--rust);
-  width: .95rem; height: .95rem;
-  margin: -.475rem 0 0 -.475rem;
-  box-shadow: 0 0 0 3px var(--rust-wash);
+  background: var(--signal);
+  width: .85rem; height: .85rem;
+  margin: -.425rem 0 0 -.425rem;
 }
 
-.slope-rank { font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
-.slope-row.is-mover .slope-rank { color: var(--rust); font-weight: 600; }
+.slope-rank { color: var(--ink); text-align: right; }
+.slope-row.is-mover .slope-rank { color: var(--signal); font-weight: 700; }
 
 .slope-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.25rem;
-  margin-top: 1.1rem;
-  font-family: var(--mono);
+  gap: 3ch;
+  margin-top: 1rem;
+  padding-top: .8rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--data);
   font-size: .7rem;
   color: var(--ink-faint);
 }
-.slope-legend b { color: var(--rust); font-weight: 600; }
+.slope-legend b { color: var(--signal); font-weight: 700; }
 
-@media (max-width: 46rem) {
-  :root { --slope-label: 7.5rem; --slope-rank: 2.5rem; --slope-gap: .6rem; }
-  .slope-row, .slope-scale { font-size: .66rem; }
+@media (max-width: 52rem) {
+  :root { --slope-label: 16ch; --slope-rank: 4ch; --slope-gap: 1ch; }
+  .slope-scale, .slope { font-size: .64rem; }
 }
 
 /* ---------------------------------------------------------------- receipts */
 
 .receipts {
-  border-top: 1.5px solid var(--ink);
-  padding: clamp(2.5rem, 5vw, 4rem) var(--gutter);
+  border-top: 2px solid var(--ink);
+  padding: clamp(2.25rem, 5vw, 3.5rem) var(--gutter);
   background: var(--paper-deep);
 }
 
 /* Two columns where there is room. Eight full SQL blocks stacked in one column
    read as a dump; side by side they read as an appendix that was laid out.
    min() keeps the track from forcing overflow on a phone. */
-/* The rules are drawn by each card's own outward ring rather than by a tinted
-   grid showing through 1px gaps: an odd number of receipts leaves an empty cell,
-   and a tinted grid renders that hole as a solid block of colour. */
 .receipt-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(30rem, 100%), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(46ch, 100%), 1fr));
   gap: 1px;
-  margin-top: 2.25rem;
+  margin-top: 2rem;
 }
 
-/* min-width:0 or the wide SQL below stretches this grid item instead of scrolling
+/* The rules are drawn by each card's own outward ring rather than by a tinted
+   grid showing through 1px gaps: an odd number of receipts leaves an empty cell,
+   and a tinted grid renders that hole as a solid block of colour.
+   min-width:0 or the wide SQL below stretches this grid item instead of scrolling
    inside it, and the whole page gains a horizontal scrollbar on a phone. */
 .receipt {
   background: var(--paper);
   box-shadow: 0 0 0 1px var(--rule);
-  padding: 1.25rem 1.4rem 1.4rem;
+  padding: 1.1rem 1.6ch 1.3rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
-.receipt.is-target { background: var(--deep-wash); }
+.receipt.is-target { box-shadow: 0 0 0 2px var(--signal); }
 
 .receipt-top {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: .4rem .8rem;
-  padding-bottom: .55rem;
+  gap: .3rem 1.2ch;
+  padding-bottom: .5rem;
   margin-bottom: .7rem;
-  border-bottom: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule);
 }
 .receipt-index {
-  font-family: var(--mono);
-  font-size: .7rem;
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
-}
-.receipt-name { font-weight: 600; font-size: .96rem; }
-.receipt-cat {
-  font-family: var(--mono);
-  font-size: .6rem;
+  font-family: var(--data);
+  font-size: .66rem;
+  font-weight: 600;
   letter-spacing: .1em;
+  color: var(--paper-lift);
+  background: var(--ink);
+  padding: 0 .8ch;
+}
+.receipt-name { font-weight: 700; font-size: .88rem; }
+.receipt-cat {
+  font-family: var(--data);
+  font-size: .58rem;
+  font-weight: 600;
+  letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--ink-faint);
   border: 1px solid var(--rule);
-  padding: .05rem .35rem;
+  padding: 0 .6ch;
 }
-.receipt-rows { margin-left: auto; font-family: var(--mono); font-size: .72rem; color: var(--ink-faint); }
-.receipt-why { font-size: .86rem; color: var(--ink-soft); margin: 0 0 .7rem; max-width: 58ch; }
+.receipt-rows {
+  margin-left: auto;
+  font-family: var(--data);
+  font-size: .68rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.receipt-why { font-size: .82rem; color: var(--ink-soft); margin: 0 0 .7rem; max-width: 60ch; }
 .receipt-source {
-  font-family: var(--mono);
-  font-size: .7rem;
-  color: var(--deep);
-  border-left: 2px solid var(--deep);
-  padding-left: .6rem;
+  font-family: var(--data);
+  font-size: .66rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--paper-deep);
+  padding: .3rem .9ch;
   margin: 0 0 .7rem;
 }
 
 .sql {
-  font-family: var(--mono);
-  font-size: .76rem;
-  line-height: 1.55;
+  font-family: var(--data);
+  font-size: .72rem;
+  line-height: 1.6;
   background: var(--paper-lift);
   border: 1px solid var(--rule);
-  padding: .85rem .95rem;
+  padding: .8rem 1.1ch;
   overflow-x: auto;
   white-space: pre;
   margin: 0;
@@ -728,39 +816,40 @@ em { font-style: italic; }
   position: relative;
   color: var(--ink-soft);
 }
-.sql:hover { border-color: var(--deep); }
+.sql:hover { border-color: var(--ink); }
 .sql[data-copied]::after {
   content: "copied";
-  position: absolute; top: .5rem; right: .6rem;
-  font-size: .66rem; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--olive);
-  background: var(--paper-lift);
-  padding-left: .4rem;
+  position: absolute; top: .45rem; right: .8ch;
+  font-size: .62rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--paper-lift);
+  background: var(--ink);
+  padding: 0 .7ch;
 }
 
 /* Tinting the SQL is not decoration: it is the difference between eight blocks of
-   grey noise and eight queries a reader can actually compare at a glance. */
-.sql .t-kw  { color: var(--deep); font-weight: 600; }
+   grey noise and eight queries a reader can actually compare at a glance. With a
+   single accent available, keywords carry weight instead of colour. */
+.sql .t-kw  { color: var(--ink); font-weight: 700; }
 .sql .t-fn  { color: var(--ink); }
-.sql .t-str { color: var(--rust); }
-.sql .t-num { color: var(--olive); }
-.sql .t-com { color: var(--ink-faint); font-style: italic; }
+.sql .t-str { color: var(--signal); }
+.sql .t-num { color: var(--signal); }
+.sql .t-com { color: var(--ink-faint); }
 
 .receipt-top-rows {
-  font-family: var(--mono);
-  font-size: .74rem;
+  font-family: var(--data);
+  font-size: .72rem;
   margin-top: .8rem;
   color: var(--ink-soft);
   display: grid;
-  gap: .15rem;
 }
+
 /* Direct child only: the row carries the ledger rule, and the name span nested
    inside it must not draw a second one that stops halfway across. */
 .receipt-top-rows > span {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
-  padding: .2rem 0;
+  gap: 2ch;
+  padding: .25rem 0;
   border-bottom: 1px dotted var(--rule);
 }
 .receipt-top-rows > span > span {
@@ -769,32 +858,33 @@ em { font-style: italic; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.receipt-top-rows > span > b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.receipt-top-rows > span > b { color: var(--ink); font-weight: 600; }
 
 /* --------------------------------------------------------------- colophon */
 
 .colophon {
-  border-top: 1px solid var(--rule);
-  padding: 2.5rem var(--gutter) 4rem;
+  border-top: 2px solid var(--ink);
+  padding: 2rem var(--gutter) 3.5rem;
   color: var(--ink-soft);
-  font-size: .86rem;
+  font-size: .8rem;
 }
 .colophon-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, .8fr);
-  gap: clamp(1.5rem, 4vw, 4rem);
+  gap: clamp(1.5rem, 4vw, 5ch);
   align-items: start;
 }
-@media (max-width: 46rem) {
+@media (max-width: 52rem) {
   .colophon-grid { grid-template-columns: 1fr; gap: 1.5rem; }
 }
-.colophon-lede { margin: 0; max-width: 68ch; }
-.colophon strong { color: var(--ink); }
+.colophon-lede { margin: 0; max-width: 76ch; }
+.colophon strong { color: var(--ink); font-weight: 700; }
 .colophon-meta {
-  font-family: var(--mono);
-  font-size: .72rem;
-  line-height: 1.7;
+  font-family: var(--data);
+  font-size: .68rem;
+  line-height: 1.9;
+  letter-spacing: .04em;
   color: var(--ink-faint);
   margin: 0;
 }
-.colophon code { font-family: var(--mono); color: var(--ink-soft); }
+.colophon code { font-family: var(--data); color: var(--ink-soft); }

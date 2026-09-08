@@ -6,26 +6,26 @@
 <title>Checksum — verify the number before you decide on it</title>
 <meta name="description" content="One studio analytics question, asked every defensible way at once against ClickHouse. The verdict is computed, not narrated.">
 <meta name="color-scheme" content="light">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;600&display=swap" rel="stylesheet">
+<link rel="preload" href="/fonts/checksum-doc.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/checksum-data.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
 
 <header class="masthead">
-  <div class="mark">
-    <span class="mark-glyph" aria-hidden="true">✓</span>
-    <span class="mark-word">Checksum</span>
-    <span class="mark-rule" aria-hidden="true"></span>
-    <span class="mark-tag">ClickHouse · Gemini · ADK</span>
+
+  <div class="docbar">
+    <span class="docbar-mark">
+      <span class="mark-glyph" aria-hidden="true">✓</span>Checksum
+    </span>
+    <span class="docbar-kind">Verification report</span>
+    <span class="docbar-rule" aria-hidden="true"></span>
+    <span class="docbar-meta">ClickHouse · Gemini · ADK</span>
   </div>
 
   <div class="mast-grid">
     <div class="mast-lede">
-      <h1 class="standfirst">
-        The query ran fine. <em>The number was wrong.</em>
-      </h1>
+      <h1 class="standfirst">The query ran fine. <em>The number was wrong.</em></h1>
       <p class="subhead">
         A studio analytics answer, asked every defensible way at once —
         against <span data-rows>500 million</span> playback events in ClickHouse.
@@ -33,7 +33,7 @@
     </div>
 
     <aside class="mast-aside">
-      <p class="aside-label">What a reading is</p>
+      <p class="aside-label"><span class="clause">00</span> Terms</p>
       <dl class="lexicon">
         <div class="lex-row">
           <dt data-cat="definition">Definition</dt>
@@ -61,7 +61,9 @@
 
 <section class="ask">
   <form id="ask-form" autocomplete="off">
-    <label class="ask-label" for="question">One question, sent to both agents</label>
+    <label class="ask-label" for="question">
+      <span class="clause">01</span> One question, sent to both agents
+    </label>
     <div class="ask-row">
       <input id="question" name="question" type="text"
              value="Which of our 2026 originals should we renew?"
@@ -81,12 +83,12 @@
 
   <article class="panel panel-standard" id="panel-standard">
     <header class="panel-head">
-      <span class="panel-kicker">Against</span>
+      <span class="panel-kicker"><span class="clause">02</span> Under review</span>
       <h2>Standard agent</h2>
       <p class="panel-note">Gemini + the ClickHouse MCP server. One query, one answer.</p>
     </header>
     <div class="panel-body">
-      <p class="idle">Waiting.</p>
+      <p class="idle">Awaiting question.</p>
     </div>
     <footer class="panel-foot" hidden>
       <span class="stat"><b id="naive-time">—</b> seconds</span>
@@ -96,7 +98,7 @@
 
   <article class="panel panel-checksum" id="panel-checksum">
     <header class="panel-head">
-      <span class="panel-kicker">Checked by</span>
+      <span class="panel-kicker"><span class="clause">03</span> Findings</span>
       <h2>Checksum</h2>
       <p class="panel-note">Every defensible reading of the same question, at once.</p>
     </header>
@@ -120,7 +122,7 @@
 
 <section class="movement" id="movement" hidden>
   <div class="section-head">
-    <h3>Where the leader goes when the definition changes</h3>
+    <h3><span class="clause">04</span> Where the leader goes when the definition changes</h3>
     <p class="movement-note" id="movement-note"></p>
   </div>
   <div class="slope-scale" id="slope-scale" aria-hidden="true"></div>
@@ -129,7 +131,7 @@
 
 <section class="receipts" id="receipts-section" hidden>
   <div class="section-head">
-    <h3>Receipts</h3>
+    <h3><span class="clause">05</span> Receipts</h3>
     <p>Every reading above ran this SQL against ClickHouse. Nothing here is a summary
        of a query — it is the query.</p>
   </div>
@@ -139,6 +141,7 @@
 <footer class="colophon">
   <div class="colophon-grid">
     <p class="colophon-lede">
+      <span class="clause">06</span>
       Catalog is real — IMDb non-commercial datasets. Playback telemetry is
       <strong>simulated at studio scale</strong>; no public playback telemetry exists,
       so it was generated inside ClickHouse. The studio originals are invented. The
@@ -146,7 +149,8 @@
     </p>
     <p class="colophon-meta">
       Gemini via the Agent Development Kit<br>
-      ClickHouse via <code>mcp-clickhouse</code> over stdio
+      ClickHouse via <code>mcp-clickhouse</code> over stdio<br>
+      Type derived from Monaspace, OFL 1.1
     </p>
   </div>
 </footer>
