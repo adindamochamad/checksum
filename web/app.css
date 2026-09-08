@@ -114,13 +114,25 @@ em { font-style: normal; }
 
 .masthead { padding: 0 var(--gutter); }
 
-/* The strip across the top of a filed document: who issued it, what it is. */
+/* The strip across the top of a filed document: who issued it, what it is.
+ *
+ * It sticks, because what follows it is long: §05 alone is nine full SQL blocks,
+ * and the whole report runs past 16,000px on a phone. A printed document solves
+ * exactly this with a running head -- the section title repeated at the top of
+ * every page -- so `.docbar-kind` carries the clause the reader is currently
+ * inside instead of a fixed label. Nothing is added to the page to achieve it;
+ * the strip that was already there does the second job. */
 .docbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 1.5ch;
-  padding: 1.1rem 0;
+  padding: .9rem var(--gutter);
+  background: var(--paper);
   border-bottom: 1px solid var(--rule);
+  overflow: hidden;
   font-family: var(--data);
   font-size: .7rem;
   letter-spacing: .18em;
@@ -130,6 +142,7 @@ em { font-style: normal; }
 
 .docbar-mark {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 1ch;
   font-weight: 700;
@@ -146,8 +159,23 @@ em { font-style: normal; }
 }
 
 .docbar-rule { flex: 1; height: 1px; background: var(--rule); }
-.docbar-kind { color: var(--ink-faint); }
-.docbar-meta { color: var(--ink-faint); }
+.docbar-meta { flex: none; color: var(--ink-faint); }
+
+/* The running head. It has to survive a 390px screen sitting next to the mark,
+   so it truncates rather than wraps -- a second line here would push the whole
+   bar taller on every scroll. */
+.docbar-kind {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-faint);
+  transition: color .2s linear;
+}
+.docbar-kind.is-section { color: var(--ink-soft); }
+
+.runhead-clause { color: var(--signal); margin-right: .7ch; }
+.runhead-clause::before { content: "§"; opacity: .55; margin-right: .3ch; }
 
 @media (max-width: 46rem) {
   .docbar-rule, .docbar-meta { display: none; }
@@ -487,7 +515,7 @@ em { font-style: normal; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reading { animation: none; }
+  .reading, .verdict { animation: none; }
 }
 
 .reading-index {
@@ -548,6 +576,14 @@ em { font-style: normal; }
   border: 2px solid var(--signal);
   border-left-width: 8px;
   background: var(--signal-wash);
+  /* Short, and downward: a stamp presses onto the page. Anything longer than
+     this reads as a web animation rather than as a document being marked. */
+  animation: stamp .26s cubic-bezier(.2,.8,.3,1) both;
+}
+
+@keyframes stamp {
+  from { opacity: 0; transform: translateY(-.2rem) scale(1.01); }
+  to   { opacity: 1; transform: none; }
 }
 .verdict::before {
   content: "Finding";
@@ -660,6 +696,19 @@ em { font-style: normal; }
   vector-effect: non-scaling-stroke;
 }
 
+/* The fall is the whole point of this section, so it is drawn as the reader
+   arrives rather than found already drawn: the lane is wiped open top to bottom
+   and each dot slides out to its rank as the wipe reaches its row.
+   A clip-path wipe rather than a stroke-dashoffset draw-on, because the polyline
+   is stroked with vector-effect: non-scaling-stroke -- that measures the dash
+   pattern in screen pixels while getTotalLength() returns viewBox units, and in
+   a viewBox scaled non-uniformly the two numbers do not agree. */
+.movement.is-armed .slope-lane { clip-path: inset(0 0 100% 0); }
+.movement.is-drawn .slope-lane {
+  clip-path: inset(0 0 0 0);
+  transition: clip-path 1.15s cubic-bezier(.35,.08,.24,1);
+}
+
 .slope-row { min-height: 2.4rem; }
 .slope-row + .slope-row { border-top: 1px solid var(--rule-soft); }
 
@@ -688,7 +737,8 @@ em { font-style: normal; }
   width: .55rem; height: .55rem;
   margin: -.275rem 0 0 -.275rem;
   background: var(--ink);
-  transition: left .5s cubic-bezier(.2,.7,.3,1);
+  /* The delay is set per row in JS, so a dot lands as the wipe passes it. */
+  transition: left .5s cubic-bezier(.2,.7,.3,1) var(--draw-delay, 0s);
   z-index: 1;
 }
 .slope-row.is-mover { background: var(--signal-wash); }
@@ -714,6 +764,14 @@ em { font-style: normal; }
   color: var(--ink-faint);
 }
 .slope-legend b { color: var(--signal); font-weight: 700; }
+
+/* Nothing here carries meaning that the motion is the only way to get: the line
+   and the dots are drawn in their final places instead. */
+@media (prefers-reduced-motion: reduce) {
+  .movement.is-armed .slope-lane,
+  .movement.is-drawn .slope-lane { clip-path: none; transition: none; }
+  .slope-dot { transition: none; }
+}
 
 @media (max-width: 52rem) {
   :root { --slope-label: 16ch; --slope-rank: 4ch; --slope-gap: 1ch; }

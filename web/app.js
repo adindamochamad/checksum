@@ -76,6 +76,12 @@ function highlightSql(sql) {
   return out + esc(sql.slice(last));
 }
 
+/* The rank chart is drawn when the reader reaches it, not when the data lands,
+   so the observer and its fallback timer outlive a single render and have to be
+   torn down before the next one. */
+let slopeWatch = null;
+let slopeTimer = 0;
+
 const state = {
   running: false,
   dataset: "",
@@ -149,6 +155,9 @@ function reset() {
     '<p class="idle">Querying…</p>';
   el("verdict").hidden = true;
   el("explanation").hidden = true;
+  if (slopeWatch) { slopeWatch.disconnect(); slopeWatch = null; }
+  clearTimeout(slopeTimer);
+  el("movement").classList.remove("is-armed", "is-drawn");
   el("movement").hidden = true;
   el("receipts-section").hidden = true;
   el("scope-banner").hidden = true;
@@ -313,8 +322,17 @@ function renderMovement(ev) {
     `${title} does not hold still. Each row is one defensible reading of the same ` +
     `question; the dot is where ${title} lands under it.`;
 
+  const movement = el("movement");
   const slope = el("slope");
   slope.innerHTML = "";
+
+  // renderMovement can run twice -- once on the verdict and again when the
+  // receipts arrive -- so the previous run's observer must go before a second
+  // one starts watching the same section.
+  if (slopeWatch) { slopeWatch.disconnect(); slopeWatch = null; }
+  clearTimeout(slopeTimer);
+  movement.classList.remove("is-drawn");
+  movement.classList.add("is-armed");
   // renderMovement runs again once the receipts arrive, so clear the previous
   // legend rather than stacking a second one under the chart.
   el("movement").querySelectorAll(".slope-legend").forEach((n) => n.remove());
@@ -362,10 +380,15 @@ function renderMovement(ev) {
   lane.appendChild(svg);
   slope.appendChild(lane);
 
-  ordered.forEach((o) => {
+  const pending = [];
+
+  ordered.forEach((o, i) => {
     const { r, rank } = o;
     const row = document.createElement("div");
     row.className = "slope-row";
+    // Staggered against the wipe above, so each dot arrives as the line reaches
+    // its row rather than all nine snapping across at once.
+    row.style.setProperty("--draw-delay", `${((i / ordered.length) * 0.95).toFixed(3)}s`);
     if (r.key === "completion_90") row.classList.add("is-mover");
 
     const label = document.createElement("span");
@@ -385,7 +408,7 @@ function renderMovement(ev) {
 
     row.append(label, track, rankLabel);
     slope.appendChild(row);
-    requestAnimationFrame(() => { dot.style.left = `${at(o)}%`; });
+    pending.push([dot, `${at(o)}%`]);
   });
 
   // State the size of the fall in words. A reader should not have to subtract two
@@ -403,7 +426,33 @@ function renderMovement(ev) {
   legend.appendChild(span);
   slope.after(legend);
 
-  el("movement").hidden = false;
+  movement.hidden = false;   // observable only once it has a box to intersect
+
+  const draw = () => {
+    if (slopeWatch) { slopeWatch.disconnect(); slopeWatch = null; }
+    clearTimeout(slopeTimer);
+    movement.classList.add("is-drawn");
+    pending.forEach(([dot, left]) => { dot.style.left = left; });
+  };
+
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (still || !("IntersectionObserver" in window)) {
+    requestAnimationFrame(draw);
+    return;
+  }
+
+  // A bottom inset rather than a threshold: on a phone this section is taller
+  // than the viewport, so "a quarter of it is visible" can never become true.
+  slopeWatch = new IntersectionObserver((entries) => {
+    if (entries.some((e) => e.isIntersecting)) draw();
+  }, { threshold: 0, rootMargin: "0px 0px -15% 0px" });
+  slopeWatch.observe(movement);
+
+  // Chromium's full-page screenshot captures beyond the viewport without
+  // scrolling, so it never trips the observer and would photograph an empty
+  // chart. Draw regardless after a beat -- by then a reader who is here has
+  // already watched it move, and one who is not has lost nothing.
+  slopeTimer = setTimeout(draw, 8000);
 }
 
 function renderReceipts(items) {
@@ -546,6 +595,54 @@ function handle(ev) {
     default:             return;
   }
 }
+
+/* ---------------------------------------------------------- running head */
+
+/* Wayfinding for a document that does not fit on a screen. Each entry is a
+   section, its clause number, and the short form of its title -- short because
+   this lands in a 0.7rem bar with 0.18em of tracking, next to the mark, on a
+   390px phone. */
+const RUNHEAD = [
+  ["ask",              "01", "The question"],
+  ["stage",            "02", "Both agents"],
+  ["movement",         "04", "Movement"],
+  ["receipts-section", "05", "Receipts"],
+];
+
+function mountRunhead() {
+  const slot = el("runhead");
+  if (!slot || !("IntersectionObserver" in window)) return;
+  const masthead = slot.textContent;   // what the bar says at the top of the page
+
+  const here = new Map();
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => here.set(e.target.id, e.isIntersecting));
+
+    // First match wins, in document order: with two sections crossing the band
+    // the reader is in the upper one, and the head should not flicker to
+    // whichever entry the observer happened to report last.
+    const at = RUNHEAD.find(([id]) => here.get(id));
+
+    slot.innerHTML = "";
+    slot.classList.toggle("is-section", Boolean(at));
+    if (!at) { slot.textContent = masthead; return; }
+    const clause = document.createElement("span");
+    clause.className = "runhead-clause";
+    clause.textContent = at[1];
+    slot.append(clause, document.createTextNode(" " + at[2]));
+  },
+  // A band across the upper third of the viewport: a section counts as the one
+  // being read once it reaches roughly where the eye is, not when its first
+  // pixel shows up at the bottom of the screen.
+  { rootMargin: "-22% 0px -62% 0px" });
+
+  RUNHEAD.forEach(([id]) => {
+    const node = document.getElementById(id);
+    if (node) io.observe(node);
+  });
+}
+
+mountRunhead();
 
 /* -------------------------------------------------------------------- boot */
 

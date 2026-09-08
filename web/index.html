@@ -12,16 +12,19 @@
 </head>
 <body>
 
-<header class="masthead">
+<!-- Outside the masthead on purpose: a sticky element only sticks for as long as
+     its containing block is on screen, so nested in <header> this bar scrolled
+     away with the headline. At body level it holds for the whole document. -->
+<div class="docbar">
+  <span class="docbar-mark">
+    <span class="mark-glyph" aria-hidden="true">✓</span>Checksum
+  </span>
+  <span class="docbar-kind" id="runhead">Verification report</span>
+  <span class="docbar-rule" aria-hidden="true"></span>
+  <span class="docbar-meta">ClickHouse · Gemini · ADK</span>
+</div>
 
-  <div class="docbar">
-    <span class="docbar-mark">
-      <span class="mark-glyph" aria-hidden="true">✓</span>Checksum
-    </span>
-    <span class="docbar-kind">Verification report</span>
-    <span class="docbar-rule" aria-hidden="true"></span>
-    <span class="docbar-meta">ClickHouse · Gemini · ADK</span>
-  </div>
+<header class="masthead">
 
   <div class="mast-grid">
     <div class="mast-lede">
@@ -59,7 +62,7 @@
   </div>
 </header>
 
-<section class="ask">
+<section class="ask" id="ask">
   <form id="ask-form" autocomplete="off">
     <label class="ask-label" for="question">
       <span class="clause">01</span> One question, sent to both agents
