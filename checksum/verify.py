@@ -230,10 +230,12 @@ def adjudicate(
     if naive_leader and policy_leader and naive_leader != policy_leader:
         naive_rank = policy_run.ranking().index(naive_leader) + 1 if policy_run and \
             naive_leader in policy_run.ranking() else None
-        where = f"rank {naive_rank}" if naive_rank else "off the list entirely"
+        # The preposition travels with the phrase: "sits at rank 4" is right, but
+        # "sits at off the list entirely" is not.
+        where = f"at rank {naive_rank}" if naive_rank else "off the list entirely"
         if basis:
             moved = (
-                f" {naive_leader} leads the most literal reading but sits at {where} "
+                f" {naive_leader} leads the most literal reading but sits {where} "
                 f"under '{basis.name}', which {basis.source_document} makes the basis "
                 f"for renewal."
             )
@@ -243,7 +245,7 @@ def adjudicate(
             # let the guards explain it; claiming one reading is correct would be
             # exactly the overconfidence this tool exists to catch.
             moved = (
-                f" {naive_leader} leads the most literal reading and sits at {where} "
+                f" {naive_leader} leads the most literal reading and sits {where} "
                 f"under '{policy_run.variant.title.lower()}'. No metric policy exists "
                 f"for this dataset, so neither reading is authoritative -- but they "
                 f"cannot both be the answer."

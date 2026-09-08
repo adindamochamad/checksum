@@ -7,15 +7,21 @@
  * Type: Instrument Serif for display, IBM Plex Sans for prose, IBM Plex Mono for
  * anything that came out of the warehouse. SQL is the product here, so mono is a
  * first-class voice rather than a code-block afterthought.
+ *
+ * Layout: sections run the full width behind their gutters and rules reach both
+ * edges, broadsheet-style. Nothing is centred in a narrow column with empty space
+ * either side; measure is held by the text blocks themselves, not by the page.
  */
 
 :root {
   --paper:      #F4F2ED;
   --paper-deep: #EAE6DE;
+  --paper-lift: #FBFAF7;
   --ink:        #16181C;
   --ink-soft:   #4A4E57;
   --ink-faint:  #8C8F97;
   --rule:       #D9D4C9;
+  --rule-soft:  #E5E1D7;
 
   --deep:       #1E3A5F;   /* the verified side */
   --deep-wash:  #E7ECF3;
@@ -27,7 +33,13 @@
   --sans:  "IBM Plex Sans", system-ui, sans-serif;
   --mono:  "IBM Plex Mono", ui-monospace, Menlo, monospace;
 
-  --gutter: clamp(1.25rem, 4vw, 4.5rem);
+  --gutter: clamp(1.25rem, 4.5vw, 5rem);
+
+  /* One shared column geometry for the rank chart, so the connecting line can be
+     positioned against the same track the dots sit in. */
+  --slope-label: 16.5rem;
+  --slope-rank:  3.5rem;
+  --slope-gap:   1.25rem;
 }
 
 * { box-sizing: border-box; }
@@ -51,17 +63,30 @@ body {
 
 em { font-style: italic; }
 
+/* Shared section heading, used by movement and receipts. */
+.section-head { max-width: 60ch; }
+
+.section-head h3 {
+  font-family: var(--serif);
+  font-size: clamp(1.5rem, 3vw, 2.15rem);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.section-head p {
+  color: var(--ink-soft);
+  margin: .6rem 0 0;
+}
+
 /* ---------------------------------------------------------------- masthead */
 
-.masthead {
-  padding: clamp(2.5rem, 7vw, 5.5rem) var(--gutter) 0;
-  max-width: 74rem;
-}
+.masthead { padding: clamp(2rem, 5vw, 3.25rem) var(--gutter) 0; }
 
 .mark {
   display: flex;
-  align-items: baseline;
-  gap: .5rem;
+  align-items: center;
+  gap: .6rem;
   font-family: var(--mono);
   font-size: .78rem;
   letter-spacing: .16em;
@@ -76,35 +101,115 @@ em { font-style: italic; }
   border: 1.5px solid var(--deep);
   color: var(--deep);
   font-size: .7rem;
-  transform: translateY(.15rem);
+}
+
+/* The rule pushes the provenance tag to the far edge, so the masthead spans the
+   page instead of trailing off after the wordmark. */
+.mark-rule { flex: 1; height: 1px; background: var(--rule); }
+
+.mark-tag {
+  font-size: .68rem;
+  letter-spacing: .14em;
+  color: var(--ink-faint);
+}
+
+@media (max-width: 40rem) {
+  .mark-rule, .mark-tag { display: none; }
+}
+
+.mast-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: end;
+  padding: clamp(1.75rem, 4vw, 3rem) 0 clamp(2rem, 4vw, 3rem);
+}
+
+@media (max-width: 62rem) {
+  .mast-grid { grid-template-columns: 1fr; align-items: start; gap: 2.5rem; }
 }
 
 .standfirst {
   font-family: var(--serif);
+  font-weight: 400;
   /* Tight and large: display type earns its space by being unmistakably display type. */
-  font-size: clamp(2.6rem, 7.5vw, 5.25rem);
-  line-height: .96;
+  font-size: clamp(2.6rem, 6.6vw, 5.5rem);
+  line-height: .95;
   letter-spacing: -0.022em;
-  margin: 1.5rem 0 0;
-  max-width: 18ch;
+  margin: 0;
+  max-width: 21ch;
 }
 
 .standfirst em { color: var(--rust); }
 
 .subhead {
-  font-size: clamp(1rem, 1.6vw, 1.12rem);
+  font-size: clamp(1rem, 1.5vw, 1.14rem);
   color: var(--ink-soft);
-  max-width: 46ch;
-  margin: 1.25rem 0 0;
+  max-width: 44ch;
+  margin: 1.4rem 0 0;
 }
 
 .subhead span { font-family: var(--mono); color: var(--ink); }
 
+/* The aside carries the vocabulary the readings list assumes. It is the reason the
+   hero fills the page: substance in the second column, not decoration. */
+.mast-aside {
+  border-top: 1.5px solid var(--ink);
+  padding-top: 1.1rem;
+  max-width: 40ch;
+}
+
+.aside-label {
+  font-family: var(--mono);
+  font-size: .68rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 1rem;
+}
+
+.lexicon { margin: 0; }
+
+.lex-row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: .9rem;
+  padding: .7rem 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.lex-row dt {
+  font-family: var(--mono);
+  font-size: .7rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding-top: .12rem;
+}
+.lex-row dt[data-cat="definition"] { color: var(--deep); }
+.lex-row dt[data-cat="dedup"]      { color: var(--rust); }
+.lex-row dt[data-cat="guard"]      { color: var(--olive); }
+
+.lex-row dd {
+  margin: 0;
+  font-size: .84rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.lex-row dd em { color: var(--ink); font-style: italic; }
+
+.aside-foot {
+  font-size: .8rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  margin: 1rem 0 0;
+}
+
 /* --------------------------------------------------------------------- ask */
 
 .ask {
-  padding: clamp(2rem, 5vw, 3.5rem) var(--gutter) 0;
-  max-width: 74rem;
+  padding: clamp(1.75rem, 4vw, 2.75rem) var(--gutter) clamp(2rem, 4vw, 3rem);
+  border-top: 1px solid var(--rule);
+  background: var(--paper-deep);
 }
 
 .ask-label {
@@ -121,11 +226,12 @@ em { font-style: italic; }
 
 #question {
   flex: 1 1 24rem;
+  min-width: 0;
   font-family: var(--mono);
   font-size: 1rem;
   padding: .95rem 1.05rem;
   color: var(--ink);
-  background: #FBFAF7;
+  background: var(--paper-lift);
   border: 1.5px solid var(--ink);
   border-radius: 0;              /* sharp corners; rounded-2xl everywhere is the tell */
   outline: none;
@@ -155,20 +261,56 @@ em { font-style: italic; }
 #run:disabled { background: var(--ink-faint); border-color: var(--ink-faint); cursor: progress; }
 .run-count { font-variant-numeric: tabular-nums; opacity: .85; }
 
-.presets { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .85rem; }
+.presets { display: grid; gap: .4rem; margin-top: 1.1rem; }
+
+.preset-group {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  align-items: start;
+  gap: .5rem 1rem;
+  padding: .5rem 0;
+  border-top: 1px solid var(--rule);
+}
+
+@media (max-width: 46rem) {
+  .preset-group { grid-template-columns: 1fr; gap: .4rem; }
+}
+
+.preset-group-name {
+  font-family: var(--mono);
+  font-size: .66rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-top: .45rem;
+}
+
+.preset-group-items { display: flex; flex-wrap: wrap; gap: .4rem; }
 
 .preset {
   font-family: var(--mono);
   font-size: .76rem;
-  padding: .38rem .7rem;
+  padding: .4rem .75rem;
   color: var(--ink-soft);
-  background: transparent;
+  background: var(--paper-lift);
   border: 1px solid var(--rule);
+  border-radius: 0;
   cursor: pointer;
-  transition: color .14s ease, border-color .14s ease;
+  transition: color .14s ease, border-color .14s ease, background .14s ease;
 }
-.preset:hover { color: var(--deep); border-color: var(--deep); }
-.preset[data-cached]::after { content: " ·  cached"; color: var(--olive); }
+.preset:hover { color: var(--deep); border-color: var(--deep); background: var(--paper); }
+.preset[data-cached]::after { content: " · cached"; color: var(--olive); }
+
+.scope-banner {
+  margin: 1.4rem 0 0;
+  padding-left: .9rem;
+  border-left: 2px solid var(--deep);
+  font-size: .86rem;
+  color: var(--ink-soft);
+  max-width: 68ch;
+}
+.scope-banner b { color: var(--deep); font-weight: 600; }
+.scope-banner i { color: var(--rust); font-style: normal; }
 
 /* ------------------------------------------------------------------- stage */
 
@@ -181,25 +323,37 @@ em { font-style: italic; }
   background: var(--rule);
   border-top: 1.5px solid var(--ink);
   border-bottom: 1.5px solid var(--ink);
-  margin: clamp(2rem, 5vw, 3.5rem) 0 0;
 }
 
-@media (max-width: 60rem) {
+@media (max-width: 62rem) {
   .stage { grid-template-columns: 1fr; }
 }
 
 .panel {
   background: var(--paper);
-  padding: clamp(1.5rem, 3vw, 2.5rem) var(--gutter);
-  min-height: 22rem;
+  padding: clamp(1.75rem, 3vw, 2.75rem) var(--gutter);
+  min-height: 26rem;
   display: flex;
   flex-direction: column;
 }
 
-.panel-checksum { background: #FBFAF8; }
+.panel-checksum { background: var(--paper-lift); }
+
+.panel-head { margin-bottom: 1.6rem; }
+
+.panel-kicker {
+  display: block;
+  font-family: var(--mono);
+  font-size: .66rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: .35rem;
+}
 
 .panel h2 {
   font-family: var(--serif);
+  font-weight: 400;
   font-size: clamp(1.6rem, 2.6vw, 2.1rem);
   line-height: 1.05;
   letter-spacing: -0.015em;
@@ -213,12 +367,24 @@ em { font-style: italic; }
   font-family: var(--mono);
   font-size: .76rem;
   color: var(--ink-faint);
-  margin: .4rem 0 1.5rem;
+  margin: .4rem 0 0;
   max-width: 44ch;
 }
 
 .panel-body { flex: 1; }
-.idle { color: var(--ink-faint); font-family: var(--mono); font-size: .85rem; }
+
+/* The empty state is a ruled placeholder rather than a lone word floating in a
+   tall box -- an idle panel should look composed, not broken. */
+.idle {
+  font-family: var(--mono);
+  font-size: .8rem;
+  letter-spacing: .06em;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  padding: 1.1rem 0;
+  margin: 0;
+}
 
 .answer { white-space: pre-wrap; margin: 0; font-size: .96rem; }
 .answer strong { font-weight: 600; }
@@ -258,12 +424,13 @@ em { font-style: italic; }
 
 .reading {
   display: grid;
-  grid-template-columns: 1.5rem 1fr auto;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: .75rem;
-  padding: .5rem 0;
-  border-bottom: 1px solid var(--rule);
-  font-size: .9rem;
+  gap: .9rem;
+  padding: .62rem .55rem;
+  margin-inline: -.55rem;
+  border-bottom: 1px solid var(--rule-soft);
+  font-size: .92rem;
   /* Each reading lands when its query returns, so the stagger is real timing,
      not a canned animation delay. */
   animation: land .34s cubic-bezier(.2,.7,.3,1) both;
@@ -286,14 +453,21 @@ em { font-style: italic; }
 }
 
 .reading-name { cursor: pointer; }
-.reading-name:hover { color: var(--deep); }
+.reading-name:hover { color: var(--deep); text-decoration: underline; text-underline-offset: .2em; }
+
+/* The category is the second axis of the list and needs to be scannable down the
+   column, so it gets a chip rather than trailing grey text. */
 .reading-cat {
+  display: inline-block;
   font-family: var(--mono);
-  font-size: .66rem;
+  font-size: .6rem;
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  margin-left: .5rem;
+  border: 1px solid var(--rule);
+  padding: .05rem .35rem;
+  margin-left: .55rem;
+  vertical-align: .1em;
 }
 
 .reading-leader {
@@ -302,17 +476,29 @@ em { font-style: italic; }
   text-align: right;
   color: var(--ink-soft);
 }
-.reading.is-policy { background: var(--deep-wash); margin-inline: -.6rem; padding-inline: .6rem; }
+
+/* The policy reading is the one the studio actually agreed to. It should be
+   impossible to miss in a list of nine near-identical rows. */
+.reading.is-policy {
+  background: var(--deep-wash);
+  border-bottom-color: var(--deep);
+  box-shadow: inset 3px 0 0 var(--deep);
+}
+.reading.is-policy .reading-name { font-weight: 600; }
+.reading.is-policy .reading-cat { border-color: var(--deep); color: var(--deep); }
 .reading.is-policy .reading-leader { color: var(--deep); font-weight: 600; }
+
+.reading.is-guard .reading-cat { border-color: var(--olive); color: var(--olive); }
 .reading.is-guard .reading-leader { color: var(--olive); }
 .reading.is-error .reading-leader { color: var(--rust); }
 
 /* ----------------------------------------------------------------- verdict */
 
 .verdict {
-  margin-top: 1.75rem;
-  padding: 1.1rem 1.25rem;
+  margin-top: 1.9rem;
+  padding: 1.2rem 1.35rem;
   border: 1.5px solid var(--rust);
+  border-left-width: 5px;
   background: var(--rust-wash);
 }
 .verdict.is-stable { border-color: var(--olive); background: #EDF0E6; }
@@ -320,7 +506,8 @@ em { font-style: italic; }
 
 .verdict-head {
   font-family: var(--serif);
-  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  font-weight: 400;
+  font-size: clamp(1.3rem, 2.2vw, 1.7rem);
   line-height: 1.1;
   letter-spacing: -0.01em;
   margin: 0;
@@ -331,160 +518,283 @@ em { font-style: italic; }
   margin-top: 1.25rem;
   font-size: .96rem;
   white-space: pre-wrap;
+  max-width: 62ch;
 }
 .explanation strong { color: var(--deep); }
 
-/* ---------------------------------------------------------------- movement */
+/* ---------------------------------------------------------------- movement
+ *
+ * The only place on the page where the disagreement is a shape rather than a
+ * sentence, so it is given a real chart: a rank axis, a gridline per position, and
+ * a line joining the dots so the drop reads as a cliff.
+ */
 
-.movement { padding: clamp(2.5rem, 6vw, 4rem) var(--gutter); max-width: 74rem; }
+.movement { padding: clamp(2.5rem, 5vw, 4rem) var(--gutter); }
+.movement-note { max-width: 58ch; }
 
-.movement h3, .receipts-head h3 {
-  font-family: var(--serif);
-  font-size: clamp(1.5rem, 3vw, 2.15rem);
-  line-height: 1.05;
-  letter-spacing: -0.015em;
-  margin: 0;
-}
-
-.movement-note { color: var(--ink-soft); max-width: 54ch; margin: .6rem 0 2rem; }
-
-.slope { display: grid; gap: .3rem; }
-
+.slope-scale,
 .slope-row {
   display: grid;
-  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr) 3.5rem;
+  grid-template-columns: var(--slope-label) minmax(0, 1fr) var(--slope-rank);
+  gap: var(--slope-gap);
   align-items: center;
-  gap: 1rem;
-  font-family: var(--mono);
-  font-size: .78rem;
 }
 
-@media (max-width: 40rem) {
-  .slope-row { grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) 2.5rem; gap: .5rem; font-size: .68rem; }
+.slope-scale {
+  margin-top: 2.25rem;
+  font-family: var(--mono);
+  font-size: .66rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-bottom: .5rem;
+  border-bottom: 1.5px solid var(--ink);
 }
-.slope-label { color: var(--ink-soft); text-align: right; }
-.slope-track { position: relative; height: 1.5rem; border-bottom: 1px dotted var(--rule); }
+.slope-scale-ends { display: flex; justify-content: space-between; }
+.slope-scale-right { text-align: right; }
+
+.slope { display: grid; position: relative; }
+
+/* Spans exactly the middle column of every row, so percentage coordinates inside
+   it line up with the dots without measuring anything in JavaScript.
+   The lane is a plain div because an <svg> carrying a viewBox is a replaced
+   element with an intrinsic aspect ratio: top/bottom do not stretch it, and it
+   silently takes its height from its width and draws far outside the chart. */
+.slope-lane {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: calc(var(--slope-label) + var(--slope-gap));
+  right: calc(var(--slope-rank) + var(--slope-gap));
+  pointer-events: none;
+}
+.slope-line {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.slope-line polyline {
+  fill: none;
+  stroke: var(--rust);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: .55;
+}
+
+.slope-row {
+  font-family: var(--mono);
+  font-size: .78rem;
+  min-height: 2.5rem;
+}
+.slope-row + .slope-row { border-top: 1px solid var(--rule-soft); }
+
+.slope-label {
+  color: var(--ink-soft);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One faint gridline per rank position: the dot lands on a tick, not adrift. */
+.slope-track {
+  position: relative;
+  height: 100%;
+  background-image: repeating-linear-gradient(
+    to right, var(--rule) 0 1px, transparent 1px var(--slope-tick, 12.5%));
+  background-position: center;
+  background-size: 100% 1.75rem;
+  background-repeat: no-repeat;
+}
+
 .slope-dot {
   position: absolute; top: 50%;
-  width: .6rem; height: .6rem;
-  margin: -.3rem 0 0 -.3rem;
+  width: .62rem; height: .62rem;
+  margin: -.31rem 0 0 -.31rem;
   background: var(--deep);
   border-radius: 50%;
   transition: left .5s cubic-bezier(.2,.7,.3,1);
+  z-index: 1;
 }
-.slope-row.is-mover .slope-dot { background: var(--rust); width: .8rem; height: .8rem; margin: -.4rem 0 0 -.4rem; }
-.slope-rank { font-variant-numeric: tabular-nums; color: var(--ink); }
+.slope-row.is-mover { background: var(--rust-wash); }
+.slope-row.is-mover .slope-label { color: var(--rust); }
+.slope-row.is-mover .slope-dot {
+  background: var(--rust);
+  width: .95rem; height: .95rem;
+  margin: -.475rem 0 0 -.475rem;
+  box-shadow: 0 0 0 3px var(--rust-wash);
+}
+
+.slope-rank { font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
 .slope-row.is-mover .slope-rank { color: var(--rust); font-weight: 600; }
+
+.slope-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-top: 1.1rem;
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--ink-faint);
+}
+.slope-legend b { color: var(--rust); font-weight: 600; }
+
+@media (max-width: 46rem) {
+  :root { --slope-label: 7.5rem; --slope-rank: 2.5rem; --slope-gap: .6rem; }
+  .slope-row, .slope-scale { font-size: .66rem; }
+}
 
 /* ---------------------------------------------------------------- receipts */
 
 .receipts {
   border-top: 1.5px solid var(--ink);
-  padding: clamp(2.5rem, 6vw, 4rem) var(--gutter);
+  padding: clamp(2.5rem, 5vw, 4rem) var(--gutter);
+  background: var(--paper-deep);
 }
-.receipts-head { max-width: 74rem; }
-.receipts-head p { color: var(--ink-soft); max-width: 56ch; margin: .6rem 0 2.25rem; }
 
-.receipt-list { display: grid; gap: 1px; background: var(--rule); max-width: 74rem; }
+/* Two columns where there is room. Eight full SQL blocks stacked in one column
+   read as a dump; side by side they read as an appendix that was laid out.
+   min() keeps the track from forcing overflow on a phone. */
+/* The rules are drawn by each card's own outward ring rather than by a tinted
+   grid showing through 1px gaps: an odd number of receipts leaves an empty cell,
+   and a tinted grid renders that hole as a solid block of colour. */
+.receipt-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(30rem, 100%), 1fr));
+  gap: 1px;
+  margin-top: 2.25rem;
+}
 
 /* min-width:0 or the wide SQL below stretches this grid item instead of scrolling
    inside it, and the whole page gains a horizontal scrollbar on a phone. */
-.receipt { background: var(--paper); padding: 1.15rem 1.35rem; min-width: 0; }
+.receipt {
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--rule);
+  padding: 1.25rem 1.4rem 1.4rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
 .receipt.is-target { background: var(--deep-wash); }
 
 .receipt-top {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: .6rem 1rem;
-  margin-bottom: .5rem;
+  gap: .4rem .8rem;
+  padding-bottom: .55rem;
+  margin-bottom: .7rem;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.receipt-index {
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
 }
 .receipt-name { font-weight: 600; font-size: .96rem; }
 .receipt-cat {
   font-family: var(--mono);
-  font-size: .66rem;
+  font-size: .6rem;
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--ink-faint);
+  border: 1px solid var(--rule);
+  padding: .05rem .35rem;
 }
-.receipt-rows { margin-left: auto; font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); }
-.receipt-why { font-size: .86rem; color: var(--ink-soft); margin: 0 0 .75rem; max-width: 62ch; }
+.receipt-rows { margin-left: auto; font-family: var(--mono); font-size: .72rem; color: var(--ink-faint); }
+.receipt-why { font-size: .86rem; color: var(--ink-soft); margin: 0 0 .7rem; max-width: 58ch; }
 .receipt-source {
   font-family: var(--mono);
-  font-size: .72rem;
+  font-size: .7rem;
   color: var(--deep);
-  margin: 0 0 .75rem;
-}
-.receipt-caveat {
-  font-size: .8rem;
-  color: var(--ink-soft);
-  border-left: 2px solid var(--rule);
-  padding-left: .7rem;
-  margin: 0 0 .75rem;
-  max-width: 62ch;
+  border-left: 2px solid var(--deep);
+  padding-left: .6rem;
+  margin: 0 0 .7rem;
 }
 
 .sql {
   font-family: var(--mono);
-  font-size: .78rem;
-  line-height: 1.5;
-  background: #FBFAF7;
+  font-size: .76rem;
+  line-height: 1.55;
+  background: var(--paper-lift);
   border: 1px solid var(--rule);
-  padding: .8rem .9rem;
+  padding: .85rem .95rem;
   overflow-x: auto;
   white-space: pre;
   margin: 0;
   cursor: copy;
   position: relative;
+  color: var(--ink-soft);
 }
 .sql:hover { border-color: var(--deep); }
 .sql[data-copied]::after {
   content: "copied";
   position: absolute; top: .5rem; right: .6rem;
-  font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+  font-size: .66rem; letter-spacing: .1em; text-transform: uppercase;
   color: var(--olive);
+  background: var(--paper-lift);
+  padding-left: .4rem;
 }
+
+/* Tinting the SQL is not decoration: it is the difference between eight blocks of
+   grey noise and eight queries a reader can actually compare at a glance. */
+.sql .t-kw  { color: var(--deep); font-weight: 600; }
+.sql .t-fn  { color: var(--ink); }
+.sql .t-str { color: var(--rust); }
+.sql .t-num { color: var(--olive); }
+.sql .t-com { color: var(--ink-faint); font-style: italic; }
 
 .receipt-top-rows {
   font-family: var(--mono);
-  font-size: .76rem;
-  margin-top: .7rem;
+  font-size: .74rem;
+  margin-top: .8rem;
   color: var(--ink-soft);
   display: grid;
-  gap: .1rem;
+  gap: .15rem;
 }
-.receipt-top-rows span b { color: var(--ink); font-variant-numeric: tabular-nums; }
+/* Direct child only: the row carries the ledger rule, and the name span nested
+   inside it must not draw a second one that stops halfway across. */
+.receipt-top-rows > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .2rem 0;
+  border-bottom: 1px dotted var(--rule);
+}
+.receipt-top-rows > span > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.receipt-top-rows > span > b { color: var(--ink); font-variant-numeric: tabular-nums; }
 
 /* --------------------------------------------------------------- colophon */
 
 .colophon {
   border-top: 1px solid var(--rule);
   padding: 2.5rem var(--gutter) 4rem;
-  max-width: 74rem;
   color: var(--ink-soft);
   font-size: .86rem;
 }
+.colophon-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, .8fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: start;
+}
+@media (max-width: 46rem) {
+  .colophon-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+}
+.colophon-lede { margin: 0; max-width: 68ch; }
 .colophon strong { color: var(--ink); }
-.colophon-meta { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); margin-top: .8rem; }
-.colophon code { font-family: var(--mono); color: var(--ink-soft); }
-
-.preset-group { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; margin-bottom: .5rem; }
-.preset-group-name {
+.colophon-meta {
   font-family: var(--mono);
-  font-size: .66rem;
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  font-size: .72rem;
+  line-height: 1.7;
   color: var(--ink-faint);
-  min-width: 9rem;
+  margin: 0;
 }
-
-.scope-banner {
-  margin: 1.1rem 0 0;
-  padding-left: .8rem;
-  border-left: 2px solid var(--deep);
-  font-size: .86rem;
-  color: var(--ink-soft);
-  max-width: 68ch;
-}
-.scope-banner b { color: var(--deep); font-weight: 600; }
-.scope-banner i { color: var(--rust); font-style: normal; }
+.colophon code { font-family: var(--mono); color: var(--ink-soft); }

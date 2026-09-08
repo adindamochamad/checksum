@@ -7,6 +7,75 @@
 
 const el = (id) => document.getElementById(id);
 
+/* An element carrying text, never markup. Warehouse values reach this page as
+   data -- on the public GitHub dataset, repository names are written by strangers
+   -- so nothing that came back from a query is ever interpolated into HTML. */
+function field(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  node.textContent = text;
+  return node;
+}
+
+/* Gemini answers in markdown, so a raw **title** reaches the page with its
+   asterisks showing. Rendering the markdown as HTML would put model output into
+   the DOM as markup; instead only bold is honoured, and only by building nodes.
+   An unbalanced run of asterisks falls back to plain text rather than bolding
+   everything after it. */
+function writeText(node, text) {
+  node.textContent = "";
+  const parts = String(text).split("**");
+  if (parts.length % 2 === 0) {
+    node.textContent = text;
+    return;
+  }
+  parts.forEach((part, i) => {
+    if (!part) return;
+    node.appendChild(i % 2 ? field("strong", "", part) : document.createTextNode(part));
+  });
+}
+
+/* --------------------------------------------------------------- sql tinting */
+
+/* Eight full queries sit on this page at once, because hiding SQL behind an
+   accordion would undercut the whole claim. Tinting them is what keeps that from
+   reading as a wall of grey: keywords, strings and numbers carry the shape of a
+   query, so two readings can be compared at a glance. The text is untouched --
+   only wrapped -- and the copy button still copies the original string. */
+/* Two-word forms come first: "GROUP BY" must win over a bare "GROUP". */
+const SQL_PHRASES = "GROUP\\s+BY|ORDER\\s+BY|PARTITION\\s+BY|LEFT\\s+JOIN|INNER\\s+JOIN";
+const SQL_WORDS =
+  "SELECT|FROM|PREWHERE|WHERE|HAVING|LIMIT|OFFSET|AND|OR|NOT|AS|IN|ON|JOIN|WITH|" +
+  "CASE|WHEN|THEN|ELSE|END|DESC|ASC|UNION|ALL|DISTINCT|BETWEEN|IS|NULL|INTERVAL|" +
+  "OVER|USING|SETTINGS|ARRAY";
+
+const SQL_TOKENS = new RegExp(
+  "(--[^\\n]*)" +                              // 1 comment to end of line
+  "|('(?:[^']|'')*')" +                        // 2 string literal
+  `|\\b(${SQL_PHRASES})\\b` +                  // 3 two-word keyword
+  `|\\b(${SQL_WORDS})\\b` +                    // 4 keyword
+  "|(\\b\\d+(?:\\.\\d+)?\\b)" +                // 5 number
+  "|([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\()",      // 6 function call
+  "gi");
+
+const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
+const esc = (s) => s.replace(/[&<>]/g, (c) => ESCAPES[c]);
+
+function highlightSql(sql) {
+  const classes = ["t-com", "t-str", "t-kw", "t-kw", "t-num", "t-fn"];
+  let out = "";
+  let last = 0;
+  let match;
+  SQL_TOKENS.lastIndex = 0;
+  while ((match = SQL_TOKENS.exec(sql)) !== null) {
+    out += esc(sql.slice(last, match.index));
+    const group = classes.findIndex((_, g) => match[g + 1] !== undefined);
+    out += `<span class="${classes[group]}">${esc(match[0])}</span>`;
+    last = match.index + match[0].length;
+  }
+  return out + esc(sql.slice(last));
+}
+
 const state = {
   running: false,
   dataset: "",
@@ -45,6 +114,10 @@ async function loadPresets() {
       name.textContent = label;
       group.appendChild(name);
 
+      const row = document.createElement("div");
+      row.className = "preset-group-items";
+      group.appendChild(row);
+
       items.forEach((p) => {
         const b = document.createElement("button");
         b.type = "button";
@@ -56,7 +129,7 @@ async function loadPresets() {
           state.dataset = p.dataset;
           run(p.question, p.dataset);
         });
-        group.appendChild(b);
+        row.appendChild(b);
       });
       box.appendChild(group);
     });
@@ -135,7 +208,7 @@ function renderNaive(ev) {
   body.innerHTML = "";
   const p = document.createElement("p");
   p.className = "answer";
-  p.textContent = ev.answer;
+  writeText(p, ev.answer);
   body.appendChild(p);
 
   el("naive-time").textContent = ev.seconds;
@@ -172,10 +245,26 @@ function renderReading(ev) {
     ? (ev.category === "guard" ? "checked" : ev.leader || "—")
     : "failed";
 
-  li.innerHTML = `
-    <span class="reading-index">${String(state.landed).padStart(2, "0")}</span>
-    <span class="reading-name">${ev.title}<span class="reading-cat">${ev.category}</span></span>
-    <span class="reading-leader">${right}</span>`;
+  // Built as nodes, not interpolated markup: the leader is a title or a repository
+  // name that came out of the warehouse, and on the public GitHub dataset that
+  // string is whatever a stranger named their repo.
+  const index = document.createElement("span");
+  index.className = "reading-index";
+  index.textContent = String(state.landed).padStart(2, "0");
+
+  const name = document.createElement("span");
+  name.className = "reading-name";
+  name.textContent = ev.title;
+  const cat = document.createElement("span");
+  cat.className = "reading-cat";
+  cat.textContent = ev.category;
+  name.appendChild(cat);
+
+  const leader = document.createElement("span");
+  leader.className = "reading-leader";
+  leader.textContent = right;
+
+  li.append(index, name, leader);
 
   li.querySelector(".reading-name").addEventListener("click", () => {
     const target = document.querySelector(`.receipt[data-key="${ev.key}"]`);
@@ -224,28 +313,96 @@ function renderMovement(ev) {
     `${title} does not hold still. Each row is one defensible reading of the same ` +
     `question; the dot is where ${title} lands under it.`;
 
-  el("slope").innerHTML = "";
+  const slope = el("slope");
+  slope.innerHTML = "";
+  // renderMovement runs again once the receipts arrive, so clear the previous
+  // legend rather than stacking a second one under the chart.
+  el("movement").querySelectorAll(".slope-legend").forEach((n) => n.remove());
+
   // Ordered by where the title lands, so the drop reads as a cliff rather than as
   // an arbitrary list. Arrival order is query timing and means nothing here.
   const ordered = rankings
     .map((r) => ({ r, rank: r.ranking.indexOf(title) + 1 }))
     .filter((x) => x.rank > 0)
     .sort((a, b) => a.rank - b.rank);
+  if (!ordered.length) return;
 
-  ordered.forEach(({ r, rank }) => {
+  const widest = Math.max(...ordered.map(({ r }) => r.ranking.length));
+  const at = ({ r, rank }) => ((rank - 1) / Math.max(1, r.ranking.length - 1)) * 100;
+
+  // One gridline per rank position, so a dot lands on a tick instead of adrift.
+  slope.style.setProperty("--slope-tick", `${100 / Math.max(1, widest - 1)}%`);
+
+  el("slope-scale").innerHTML = "";
+  const scaleEnds = document.createElement("span");
+  scaleEnds.className = "slope-scale-ends";
+  const best = document.createElement("span");
+  best.textContent = "rank 1";
+  const worst = document.createElement("span");
+  worst.className = "slope-scale-right";
+  worst.textContent = `rank ${widest}`;
+  scaleEnds.append(best, worst);
+  el("slope-scale").append(document.createElement("span"), scaleEnds,
+                           document.createElement("span"));
+
+  // The line joining the dots is what makes this a chart rather than a list of
+  // rows. It is positioned against the same track the dots sit in, in percentages,
+  // so nothing has to be measured and it survives a resize on its own.
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "slope-line");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("preserveAspectRatio", "none");
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+  line.setAttribute("points", ordered
+    .map((o, i) => `${at(o)},${((i + 0.5) / ordered.length) * 100}`)
+    .join(" "));
+  svg.appendChild(line);
+  const lane = document.createElement("div");
+  lane.className = "slope-lane";
+  lane.appendChild(svg);
+  slope.appendChild(lane);
+
+  ordered.forEach((o) => {
+    const { r, rank } = o;
     const row = document.createElement("div");
     row.className = "slope-row";
     if (r.key === "completion_90") row.classList.add("is-mover");
-    const pct = ((rank - 1) / Math.max(1, r.ranking.length - 1)) * 100;
-    row.innerHTML = `
-      <span class="slope-label">${r.title}</span>
-      <span class="slope-track"><span class="slope-dot" style="left:0%"></span></span>
-      <span class="slope-rank">#${rank}</span>`;
-    el("slope").appendChild(row);
-    requestAnimationFrame(() => {
-      row.querySelector(".slope-dot").style.left = `${pct}%`;
-    });
+
+    const label = document.createElement("span");
+    label.className = "slope-label";
+    label.textContent = r.title;
+
+    const track = document.createElement("span");
+    track.className = "slope-track";
+    const dot = document.createElement("span");
+    dot.className = "slope-dot";
+    dot.style.left = "0%";
+    track.appendChild(dot);
+
+    const rankLabel = document.createElement("span");
+    rankLabel.className = "slope-rank";
+    rankLabel.textContent = `#${rank}`;
+
+    row.append(label, track, rankLabel);
+    slope.appendChild(row);
+    requestAnimationFrame(() => { dot.style.left = `${at(o)}%`; });
   });
+
+  // State the size of the fall in words. A reader should not have to subtract two
+  // rank labels to see the point of the chart.
+  const legend = document.createElement("p");
+  legend.className = "slope-legend";
+  const span = document.createElement("span");
+  const first = ordered[0].rank;
+  const last = ordered[ordered.length - 1].rank;
+  span.append(document.createTextNode(`${title} — `));
+  const drop = document.createElement("b");
+  drop.textContent = `#${first} → #${last}`;
+  span.append(drop, document.createTextNode(
+    ` across ${ordered.length} readings of one question`));
+  legend.appendChild(span);
+  slope.after(legend);
+
   el("movement").hidden = false;
 }
 
@@ -254,17 +411,20 @@ function renderReceipts(items) {
   const list = el("receipts");
   list.innerHTML = "";
 
-  items.forEach((item) => {
+  items.forEach((item, i) => {
     const box = document.createElement("article");
     box.className = "receipt";
     box.dataset.key = item.key;
 
     const top = document.createElement("div");
     top.className = "receipt-top";
-    top.innerHTML = `
-      <span class="receipt-name">${item.title}</span>
-      <span class="receipt-cat">${item.category}</span>
-      <span class="receipt-rows">${item.ok ? `${item.row_count} rows` : "failed"}</span>`;
+    // The index ties a receipt back to its row in the readings list above.
+    top.append(
+      field("span", "receipt-index", String(i + 1).padStart(2, "0")),
+      field("span", "receipt-name", item.title),
+      field("span", "receipt-cat", item.category),
+      field("span", "receipt-rows", item.ok ? `${item.row_count} rows` : "failed"),
+    );
     box.appendChild(top);
 
     if (item.rationale) {
@@ -282,7 +442,7 @@ function renderReceipts(items) {
 
     const sql = document.createElement("pre");
     sql.className = "sql";
-    sql.textContent = item.sql;
+    sql.innerHTML = highlightSql(item.sql);
     sql.title = "Click to copy";
     sql.addEventListener("click", async () => {
       try {
@@ -298,11 +458,12 @@ function renderReceipts(items) {
     if (item.ranking && item.ranking.length) {
       const rows = document.createElement("div");
       rows.className = "receipt-top-rows";
-      item.rows.slice(0, 3).forEach((row, i) => {
+      item.rows.slice(0, 3).forEach((row, n) => {
         const span = document.createElement("span");
-        span.innerHTML = `${i + 1}. ${item.ranking[i]} — <b>${Number(
-          row[1]
-        ).toLocaleString()}</b>`;
+        // On the public GitHub dataset these names are whatever a stranger called
+        // their repository, so they are set as text and never as markup.
+        span.appendChild(field("span", "", `${n + 1}. ${item.ranking[n]}`));
+        span.appendChild(field("b", "", Number(row[1]).toLocaleString()));
         rows.appendChild(span);
       });
       box.appendChild(rows);
@@ -377,7 +538,7 @@ function handle(ev) {
     case "verdict":      state.pendingVerdict = ev; return renderVerdict(ev);
     case "explanation": {
       const box = el("explanation");
-      box.textContent = ev.text;
+      writeText(box, ev.text);
       box.hidden = false;
       return;
     }
